@@ -23,14 +23,15 @@ export default function AuthLayout({
               <div className="flex flex-col items-center max-w-xs">
                 <Link href="/" className="block mb-4">
                   <Image
-                    width={231}
-                    height={48}
-                    src="./images/logo/auth-logo.svg"
-                    alt="Logo"
+                    width={200}
+                    height={120}
+                    src="/images/logo/voltguard-logo.png"
+                    alt="VoltGuard Logo"
+                    className="dark:invert"
                   />
                 </Link>
                 <p className="text-center text-gray-400 dark:text-white/60">
-                  Welcome to VoltGuard! Please sign in to your account.
+                  Smart Power Grid Inspection with AI-Powered Drone Monitoring
                 </p>
               </div>
             </div>

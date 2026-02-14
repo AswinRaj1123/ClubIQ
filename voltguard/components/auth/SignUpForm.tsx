@@ -4,12 +4,75 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { authAPI } from "@/lib/api";
 
 export default function SignUpForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [userType, setUserType] = useState("consumer");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setError(null); // Clear error when user types
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!formData.firstName.trim() || !formData.lastName.trim()) {
+        throw new Error("First name and last name are required");
+      }
+      if (!formData.email.trim()) {
+        throw new Error("Email is required");
+      }
+      if (!formData.password.trim()) {
+        throw new Error("Password is required");
+      }
+      if (!isChecked) {
+        throw new Error("You must agree to the terms and conditions");
+      }
+
+      const response = await authAPI.signup({
+        email: formData.email,
+        password: formData.password,
+        full_name: `${formData.firstName} ${formData.lastName}`,
+        role: userType,
+      });
+
+      // Show success message
+      setSuccess(true);
+
+      // Redirect to signin page after 2 seconds
+      setTimeout(() => {
+        router.push("/signin");
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign up failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -32,7 +95,21 @@ export default function SignUpForm() {
             </p>
           </div>
           <div>
-            <form>
+            <form onSubmit={handleSubmit}>
+              {/* Error message */}
+              {error && (
+                <div className="mb-5 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm dark:bg-red-900/30 dark:border-red-700 dark:text-red-400">
+                  {error}
+                </div>
+              )}
+
+              {/* Success message */}
+              {success && (
+                <div className="mb-5 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm dark:bg-green-900/30 dark:border-green-700 dark:text-green-400">
+                  ✓ Account created successfully! Redirecting to sign in...
+                </div>
+              )}
+
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   {/* <!-- First Name --> */}
@@ -42,9 +119,11 @@ export default function SignUpForm() {
                     </Label>
                     <Input
                       type="text"
-                      id="fname"
-                      name="fname"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
                       placeholder="Enter your first name"
+                      disabled={loading || success}
                     />
                   </div>
                   {/* <!-- Last Name --> */}
@@ -54,9 +133,11 @@ export default function SignUpForm() {
                     </Label>
                     <Input
                       type="text"
-                      id="lname"
-                      name="lname"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
                       placeholder="Enter your last name"
+                      disabled={loading || success}
                     />
                   </div>
                 </div>
@@ -75,6 +156,7 @@ export default function SignUpForm() {
                         checked={userType === "consumer"}
                         onChange={(e) => setUserType(e.target.value)}
                         className="w-4 h-4 accent-brand-500 cursor-pointer"
+                        disabled={loading || success}
                       />
                       <label htmlFor="consumer" className="text-sm text-gray-700 dark:text-gray-400 cursor-pointer">
                         Consumer
@@ -89,6 +171,7 @@ export default function SignUpForm() {
                         checked={userType === "electrician"}
                         onChange={(e) => setUserType(e.target.value)}
                         className="w-4 h-4 accent-brand-500 cursor-pointer"
+                        disabled={loading || success}
                       />
                       <label htmlFor="electrician" className="text-sm text-gray-700 dark:text-gray-400 cursor-pointer">
                         Electrician
@@ -103,9 +186,11 @@ export default function SignUpForm() {
                   </Label>
                   <Input
                     type="email"
-                    id="email"
                     name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     placeholder="Enter your email"
+                    disabled={loading || success}
                   />
                 </div>
                 {/* <!-- Password --> */}
@@ -117,6 +202,10 @@ export default function SignUpForm() {
                     <Input
                       placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      disabled={loading || success}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -136,6 +225,7 @@ export default function SignUpForm() {
                     className="w-5 h-5"
                     checked={isChecked}
                     onChange={setIsChecked}
+                    disabled={loading || success}
                   />
                   <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
                     By creating an account means you agree to the{" "}
@@ -150,8 +240,12 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Button --> */}
                 <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                    Sign Up
+                  <button 
+                    type="submit"
+                    disabled={loading || success}
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {success ? "Account Created!" : loading ? "Signing Up..." : "Sign Up"}
                   </button>
                 </div>
               </div>
