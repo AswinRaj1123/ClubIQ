@@ -5,19 +5,34 @@ import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
 import Button from "@/components/ui/button/Button";
+import { faultAPI } from "@/lib/api";
+import { useSharedLocation } from "@/context/SharedLocationContext";
+
+interface SubmitResponse {
+  success: boolean;
+  message: string;
+  requestId?: string;
+}
 
 export default function RaiseFaultRequest() {
-  const [faultDesc, setFaultDesc] = useState("");
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    location: "",
+    priority: "medium",
+  });
   const [faultImage, setFaultImage] = useState<File | null>(null);
   const [faultImagePreview, setFaultImagePreview] = useState<string | null>(null);
-  const [faultLocation, setFaultLocation] = useState("");
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedPhotoPreview, setCapturedPhotoPreview] = useState<string | null>(null);
   const [capturedPhotoFile, setCapturedPhotoFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<SubmitResponse | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { sharedLocation, clearSharedLocation } = useSharedLocation();
 
   // Cleanup camera on unmount
   useEffect(() => {
@@ -28,6 +43,17 @@ export default function RaiseFaultRequest() {
       }
     };
   }, []);
+
+  // Auto-fill location when shared location is updated
+  useEffect(() => {
+    if (sharedLocation) {
+      setFormData(prev => ({
+        ...prev,
+        location: sharedLocation.location,
+      }));
+      console.log("Location auto-filled from shared location:", sharedLocation.location);
+    }
+  }, [sharedLocation]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -130,24 +156,84 @@ export default function RaiseFaultRequest() {
     setShowPhotoOptions(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const requestData = {
-      description: faultDesc,
-      image: faultImage,
-      location: faultLocation,
-      timestamp: new Date().toISOString(),
-    };
-    
-    console.log("Fault Request:", requestData);
-    
-    setFaultDesc("");
-    setFaultImage(null);
-    setFaultImagePreview(null);
-    setFaultLocation("");
-    
-    alert("Fault request submitted successfully!");
+    setIsSubmitting(true);
+    setSubmitStatus(null);
+
+    try {
+      if (!formData.title.trim()) {
+        throw new Error("Please enter a fault title");
+      }
+      if (!formData.description.trim()) {
+        throw new Error("Please describe the issue");
+      }
+      if (!formData.location.trim()) {
+        throw new Error("Please enter the location");
+      }
+
+      // Convert image to Data URL if present
+      let photoUrl: string | undefined = undefined;
+      if (faultImage && faultImagePreview) {
+        photoUrl = faultImagePreview;
+      }
+
+      // Call API to create fault request with coordinates from sharedLocation
+      const response = await faultAPI.createFaultRequest({
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        latitude: sharedLocation?.latitude,
+        longitude: sharedLocation?.longitude,
+        priority: formData.priority,
+        photo_url: photoUrl,
+      });
+
+      console.log("Fault request created:", response);
+
+      setSubmitStatus({
+        success: true,
+        message: "Fault request submitted successfully!",
+        requestId: response.id,
+      });
+
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        location: "",
+        priority: "medium",
+      });
+      setFaultImage(null);
+      setFaultImagePreview(null);
+      setShowPhotoOptions(false);
+      clearSharedLocation();
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSubmitStatus(null);
+      }, 3000);
+    } catch (error) {
+      let errorMessage = "Failed to submit fault request";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      } else if (error && typeof error === "object") {
+        errorMessage = JSON.stringify(error);
+      }
+      
+      console.error("Submit error:", errorMessage);
+      console.error("Full error details:", error);
+      
+      setSubmitStatus({
+        success: false,
+        message: errorMessage,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -165,6 +251,40 @@ export default function RaiseFaultRequest() {
       {/* Card Body */}
       <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Status Messages */}
+          {submitStatus && (
+            <div className={`p-4 rounded-lg border ${
+              submitStatus.success
+                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700'
+                : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700'
+            }`}>
+              <p className={submitStatus.success ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
+                {submitStatus.message}
+              </p>
+              {submitStatus.requestId && (
+                <p className="text-sm text-green-600 dark:text-green-300 mt-1">
+                  Request ID: {submitStatus.requestId}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Fault Title */}
+          <div>
+            <Label htmlFor="faultTitle" required>
+              Fault Title
+            </Label>
+            <Input
+              id="faultTitle"
+              name="faultTitle"
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Brief title of the issue (e.g., Power Trip, Sparking Wire)"
+              required
+            />
+          </div>
+
           {/* Fault Description */}
           <div>
             <Label htmlFor="faultDesc" required>
@@ -173,12 +293,32 @@ export default function RaiseFaultRequest() {
             <TextArea
               id="faultDesc"
               name="faultDesc"
-              value={faultDesc}
-              onChange={setFaultDesc}
+              value={formData.description}
+              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
               rows={4}
               placeholder="Describe your electrical issue in detail..."
               required
             />
+          </div>
+
+          {/* Priority */}
+          <div>
+            <Label htmlFor="priority" required>
+              Priority Level
+            </Label>
+            <select
+              id="priority"
+              name="priority"
+              value={formData.priority}
+              onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+              required
+            >
+              <option value="low">Low - Not urgent</option>
+              <option value="medium">Medium - Standard</option>
+              <option value="high">High - Important</option>
+              <option value="critical">Critical - Emergency</option>
+            </select>
           </div>
 
           {/* Upload Image */}
@@ -367,22 +507,37 @@ export default function RaiseFaultRequest() {
           <div>
             <Label htmlFor="faultLocation" required>
               Location
+              {sharedLocation && (
+                <span className="ml-2 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">
+                  📍 GPS Shared
+                </span>
+              )}
             </Label>
             <Input
               id="faultLocation"
               name="faultLocation"
               type="text"
-              value={faultLocation}
-              onChange={(e) => setFaultLocation(e.target.value)}
-              placeholder="Type address or location name..."
+              value={formData.location}
+              onChange={(e) => {
+                if (!sharedLocation) {
+                  setFormData(prev => ({ ...prev, location: e.target.value }));
+                }
+              }}
+              placeholder={sharedLocation ? "Location is locked from GPS" : "Type address or location name..."}
               required
-              hint="Start typing to search locations on map"
+              disabled={!!sharedLocation}
+              hint={sharedLocation ? "Location is automatically set from your GPS coordinates" : "Start typing to search locations on map"}
             />
           </div>
 
           {/* Submit Button */}
-          <Button type="submit" variant="primary" className="w-full">
-            Submit Request
+          <Button 
+            type="submit" 
+            variant="primary" 
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Submit Request"}
           </Button>
         </form>
       </div>

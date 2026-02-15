@@ -1,58 +1,63 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
+import { faultAPI } from "@/lib/api";
 
-interface Request {
+interface FaultRequest {
   id: string;
+  title: string;
   description: string;
   location: string;
-  status: "pending" | "active" | "rejected" | "completed";
-  timestamp: string;
-  electrician?: string;
+  status: "open" | "assigned" | "in_progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high" | "critical";
+  photo_url?: string;
+  assigned_to?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function MyRequests() {
-  const [requests] = useState<Request[]>([
-    {
-      id: "REQ-001",
-      description: "Power outage in living room, multiple outlets not working",
-      location: "123 Main St, Apartment 4B",
-      status: "active",
-      timestamp: "2024-02-14 10:30 AM",
-      electrician: "John Electrician",
-    },
-    {
-      id: "REQ-002",
-      description: "Circuit breaker keeps tripping",
-      location: "123 Main St, Apartment 4B",
-      status: "pending",
-      timestamp: "2024-02-13 03:45 PM",
-    },
-    {
-      id: "REQ-003",
-      description: "Faulty light switch in bedroom",
-      location: "123 Main St, Apartment 4B",
-      status: "completed",
-      timestamp: "2024-02-12 09:15 AM",
-      electrician: "Sarah Tech",
-    },
-  ]);
+  const [requests, setRequests] = useState<FaultRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMyRequests();
+  }, []);
+
+  const fetchMyRequests = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await faultAPI.getMyFaultRequests();
+      console.log("Fetched requests:", response);
+      setRequests(response.requests);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load requests";
+      console.error("Error fetching requests:", errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusColor = (
     status: string
   ): "warning" | "success" | "error" | "info" => {
     switch (status) {
-      case "pending":
+      case "open":
         return "warning";
-      case "active":
-        return "success";
-      case "rejected":
-        return "error";
-      case "completed":
+      case "assigned":
         return "info";
+      case "in_progress":
+        return "success";
+      case "resolved":
+        return "info";
+      case "closed":
+        return "error";
       default:
         return "info";
     }
@@ -60,16 +65,42 @@ export default function MyRequests() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "pending":
-        return "⏳";
-      case "active":
+      case "open":
+        return "📋";
+      case "assigned":
+        return "👨‍🔧";
+      case "in_progress":
+        return "⚡";
+      case "resolved":
         return "✅";
-      case "rejected":
+      case "closed":
         return "❌";
-      case "completed":
-        return "🎉";
       default:
         return "📋";
+    }
+  };
+
+  const getPriorityColor = (priority: string): string => {
+    switch (priority) {
+      case "low":
+        return "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400";
+      case "medium":
+        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case "high":
+        return "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400";
+      case "critical":
+        return "text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400";
+      default:
+        return "text-gray-600 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-400";
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+    } catch {
+      return dateString;
     }
   };
 
@@ -87,9 +118,28 @@ export default function MyRequests() {
 
       {/* Card Body */}
       <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
-        {requests.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">Loading requests...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500 dark:text-red-400">Error: {error}</p>
+            <Button 
+              onClick={fetchMyRequests} 
+              variant="outline" 
+              size="sm" 
+              className="mt-4"
+            >
+              Try Again
+            </Button>
+          </div>
+        ) : requests.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">No requests yet</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+              Raise a fault request to get started
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -101,32 +151,64 @@ export default function MyRequests() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-                        {request.id}
+                      <span className="text-xs font-mono bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-gray-700 dark:text-gray-300">
+                        {request.id.substring(0, 8)}
                       </span>
-                      <Badge variant="light" color={getStatusColor(request.status)}>
+                      <Badge 
+                        variant="light" 
+                        color={getStatusColor(request.status)}
+                      >
                         {getStatusIcon(request.status)} {request.status.toUpperCase()}
                       </Badge>
+                      <span className={`text-xs px-2 py-1 rounded font-medium ${getPriorityColor(request.priority)}`}>
+                        {request.priority.toUpperCase()}
+                      </span>
                     </div>
                     <h4 className="text-base font-semibold text-gray-800 dark:text-white mb-2">
-                      {request.description}
+                      {request.title}
                     </h4>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                      {request.description}
+                    </p>
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                       <p>📍 {request.location}</p>
-                      <p>🕒 {request.timestamp}</p>
-                      {request.electrician && (
-                        <p>👨‍🔧 Assigned to: {request.electrician}</p>
+                      <p>🕒 {formatDate(request.created_at)}</p>
+                      {request.assigned_to && (
+                        <p>👨‍🔧 Assigned to: {request.assigned_to}</p>
                       )}
                     </div>
                   </div>
-                  {request.status === "active" && (
-                    <Link href="/chat">
-                      <Button size="sm" variant="primary" className="ml-4">
-                        View Chat
+                  <div className="flex gap-2">
+                    {request.photo_url && (
+                      <Button 
+                        onClick={() => window.open(request.photo_url, '_blank')}
+                        size="sm" 
+                        variant="outline"
+                      >
+                        📷 View Photo
                       </Button>
-                    </Link>
-                  )}
+                    )}
+                    {request.status !== "open" && request.status !== "closed" && (
+                      <Link href={`/consumer/chat/${request.id}`}>
+                        <Button size="sm" variant="primary">
+                          💬 Chat
+                        </Button>
+                      </Link>
+                    )}
+                    {request.status === "open" && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 italic">
+                        Waiting for electrician to accept...
+                      </div>
+                    )}
+                  </div>
                 </div>
+                {request.photo_url && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      📷 <span className="font-medium">Photo uploaded</span> - click "View Photo" button to preview
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

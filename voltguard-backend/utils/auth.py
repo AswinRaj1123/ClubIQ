@@ -3,6 +3,7 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Optional
 from config import settings
+from fastapi import Depends, HTTPException, status, Header
 
 def hash_password(password: str) -> str:
     """Hash password using bcrypt"""
@@ -34,3 +35,54 @@ def decode_access_token(token: str) -> Optional[dict]:
         return None
     except jwt.InvalidTokenError:
         return None
+
+
+async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
+    """
+    Get current user from JWT token in Authorization header
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Extract token from "Bearer <token>" format
+    try:
+        parts = authorization.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise ValueError("Invalid format")
+        token = parts[1]
+    except (ValueError, IndexError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format. Use 'Bearer <token>'",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    payload = decode_access_token(token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("user_id")
+    email = payload.get("email")
+    role = payload.get("role")
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return {
+        "_id": user_id,
+        "email": email,
+        "role": role
+    }

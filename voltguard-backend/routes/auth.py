@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import APIRouter, HTTPException, status, Request, Depends
 from typing import Optional
 from datetime import datetime
 from database import get_db
 from models import User
 from schemas import SignUpRequest, SignInRequest, TokenResponse, MessageResponse, UserResponse
 from utils import hash_password, verify_password, create_access_token, decode_access_token
+from utils.auth import get_current_user
 from bson import ObjectId
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -54,7 +55,7 @@ async def signup(req: SignUpRequest):
     
     # Prepare response
     user_response = UserResponse(
-        _id=str(user._id),
+        id=str(user._id),
         email=user.email,
         full_name=user.full_name,
         role=user.role,
@@ -113,7 +114,7 @@ async def signin(req: SignInRequest):
     
     # Prepare response
     user_response = UserResponse(
-        _id=str(user._id),
+        id=str(user._id),
         email=user.email,
         full_name=user.full_name,
         role=user.role,
@@ -192,4 +193,57 @@ async def get_current_user(request: Request):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.put("/update-role", response_model=TokenResponse)
+async def update_user_role(
+    current_user = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """
+    Update current user's role to electrician
+    This endpoint allows users to change their role (e.g., from consumer to electrician)
+    """
+    try:
+        new_role = "electrician"
+        
+        users_collection = db["users"]
+        
+        # Update user's role
+        result = users_collection.update_one(
+            {"_id": ObjectId(current_user.get("_id"))},
+            {"$set": {"role": new_role, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Fetch updated user
+        updated_user = users_collection.find_one({"_id": ObjectId(current_user.get("_id"))})
+        
+        # Create new token with updated role
+        access_token = create_access_token(str(updated_user["_id"]), updated_user["email"], updated_user["role"])
+        
+        user_response = UserResponse(
+            id=str(updated_user["_id"]),
+            email=updated_user["email"],
+            full_name=updated_user["full_name"],
+            role=updated_user["role"],
+            phone=updated_user.get("phone"),
+            company=updated_user.get("company"),
+            is_active=updated_user.get("is_active", True),
+            created_at=updated_user["created_at"]
+        )
+        
+        return TokenResponse(access_token=access_token, user=user_response)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating role: {str(e)}"
         )

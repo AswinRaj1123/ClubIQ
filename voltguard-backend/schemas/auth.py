@@ -29,6 +29,9 @@ class UserResponse(BaseModel):
     
     class Config:
         populate_by_name = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
 
 class TokenResponse(BaseModel):
     """Token response schema"""

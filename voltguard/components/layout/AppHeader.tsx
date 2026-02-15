@@ -3,15 +3,20 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const toggleApplicationMenu = () => {
     setApplicationMenuOpen(!isApplicationMenuOpen);
   };
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Check if on consumer route
+  const isConsumerRoute = pathname.includes("/consumer/");
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -61,7 +66,9 @@ const AppHeader: React.FC = () => {
 
           <Link
             href="/dashboard"
-            className="hidden items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:flex"
+            className={`${
+              isConsumerRoute ? "hidden" : "hidden"
+            } items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:flex`}
             title="Back to Dashboard"
           >
             <svg

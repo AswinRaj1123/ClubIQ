@@ -43,10 +43,15 @@ export default function SignInForm() {
         throw new Error("Password is required");
       }
 
+      console.log("Attempting signin with email:", formData.email);
+      console.log("API Base URL:", process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
+      
       const response = await authAPI.signin({
         email: formData.email,
         password: formData.password,
       });
+
+      console.log("Sign in successful:", response);
 
       // Save token and user
       authAPI.saveToken(response.access_token);
@@ -61,7 +66,9 @@ export default function SignInForm() {
         router.push("/consumer");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed");
+      const errorMessage = err instanceof Error ? err.message : "Sign in failed";
+      console.error("Sign in error:", errorMessage, err);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

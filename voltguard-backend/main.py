@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth_router
+from routes import auth_router, consumer_router, electrician_router, chat_router
 from database import close_db
 
 # Create FastAPI app
@@ -22,6 +22,15 @@ app.add_middleware(
 
 # Include auth routes
 app.include_router(auth_router)
+
+# Include consumer routes
+app.include_router(consumer_router)
+
+# Include electrician routes
+app.include_router(electrician_router)
+
+# Include chat routes
+app.include_router(chat_router)
 
 # Health check endpoint
 @app.get("/health")

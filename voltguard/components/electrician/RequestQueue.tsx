@@ -1,278 +1,376 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Badge from "../ui/badge/Badge";
-import Image from "next/image";
+import Button from "../ui/button/Button";
+import Link from "next/link";
+import { faultAPI } from "@/lib/api";
+import dynamic from "next/dynamic";
 
-interface Request {
+// Dynamically import Leaflet to avoid SSR issues
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Popup),
+  { ssr: false }
+);
+
+interface FaultRequest {
   id: string;
-  consumerName: string;
+  consumer_id: string;
+  title: string;
   description: string;
   location: string;
-  image?: string;
-  status: "pending" | "active" | "completed";
-  timestamp: string;
-  priority: "high" | "medium" | "low";
+  latitude?: number;
+  longitude?: number;
+  status: "open" | "assigned" | "in_progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high" | "critical";
+  photo_url?: string;
+  assigned_to?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// Sample data - replace with actual data from API
-const requestData: Request[] = [
-  {
-    id: "REQ-001",
-    consumerName: "John Doe",
-    description: "Main circuit breaker keeps tripping - urgent help needed",
-    location: "123 Main St, Coimbatore",
-    image: "/images/product/product-01.jpg",
-    status: "pending",
-    timestamp: "10 mins ago",
-    priority: "high",
-  },
-  {
-    id: "REQ-002",
-    consumerName: "Sarah Miller",
-    description: "Light switches not working in two rooms",
-    location: "456 Park Avenue, Coimbatore",
-    status: "pending",
-    timestamp: "25 mins ago",
-    priority: "medium",
-  },
-  {
-    id: "REQ-003",
-    consumerName: "Mike Johnson",
-    description: "Power outlet sparking - need immediate assistance",
-    location: "789 Oak Drive, Coimbatore",
-    image: "/images/product/product-02.jpg",
-    status: "pending",
-    timestamp: "1 hour ago",
-    priority: "high",
-  },
-  {
-    id: "REQ-004",
-    consumerName: "Emily Davis",
-    description: "Ceiling fan installation needed",
-    location: "321 Elm Street, Coimbatore",
-    status: "pending",
-    timestamp: "2 hours ago",
-    priority: "low",
-  },
-];
-
 export default function RequestQueue() {
-  const handleAccept = (requestId: string) => {
-    console.log("Accepted request:", requestId);
-    // TODO: Implement accept logic
+  const [requests, setRequests] = useState<FaultRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<FaultRequest | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchRequests();
+    
+    // Listen for session completion event
+    const handleSessionCompleted = () => {
+      console.log("Session completed event received, refreshing...");
+      fetchRequests();
+    };
+    
+    window.addEventListener("session-completed", handleSessionCompleted as EventListener);
+    
+    return () => {
+      window.removeEventListener("session-completed", handleSessionCompleted as EventListener);
+    };
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await faultAPI.getAllFaultRequests("open");
+      console.log("Fetched requests:", response);
+      setRequests(response.requests);
+      if (response.requests.length > 0) {
+        setSelectedRequest(response.requests[0]);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load requests";
+      console.error("Error fetching requests:", errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReject = (requestId: string) => {
-    console.log("Rejected request:", requestId);
-    // TODO: Implement reject logic
+  const handleAccept = async (requestId: string) => {
+    try {
+      setActionLoading(requestId);
+      const token = localStorage.getItem("voltguard_token");
+      const user = localStorage.getItem("voltguard_user");
+      const userId = user ? JSON.parse(user).id : "";
+
+      await faultAPI.updateFaultStatus(requestId, {
+        status: "assigned",
+        assigned_to: userId,
+      });
+
+      console.log("Request accepted:", requestId);
+      alert("✅ Request accepted! Opening chat in a new tab...");
+      
+      // Open chat in a new tab
+      window.open(`/electrician/chat/${requestId}`, "_blank");
+      
+      // Dispatch custom event to notify ActiveSession
+      window.dispatchEvent(new CustomEvent("request-accepted", { detail: { requestId } }));
+      
+      // Refresh requests after a short delay to ensure DB is updated
+      setTimeout(() => {
+        fetchRequests();
+      }, 500);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to accept request";
+      console.error("Error accepting request:", errorMessage);
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleViewLocation = (location: string) => {
-    console.log("View location:", location);
-    // TODO: Implement location view
+  const handleReject = async (requestId: string) => {
+    try {
+      setActionLoading(requestId);
+      // For rejection, we just don't assign it - it stays open
+      console.log("Request rejected:", requestId);
+      alert("❌ Request rejected and remains available for other electricians.");
+      
+      // Refresh requests to remove it from accepted list
+      fetchRequests();
+    } catch (err) {
+      console.error("Error rejecting request:", err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const getPriorityColor = (priority: string): string => {
+    switch (priority) {
+      case "low":
+        return "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400";
+      case "medium":
+        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case "high":
+        return "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400";
+      case "critical":
+        return "text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400";
+      default:
+        return "text-gray-600 bg-gray-50 dark:bg-gray-900/20 dark:text-gray-400";
+    }
+  };
+
+  const getStatusBadgeColor = (
+    status: string
+  ): "warning" | "success" | "error" | "info" => {
+    switch (status) {
+      case "open":
+        return "warning";
+      case "assigned":
+        return "info";
+      case "in_progress":
+        return "success";
+      case "resolved":
+        return "info";
+      case "closed":
+        return "error";
+      default:
+        return "info";
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+    } catch {
+      return dateString;
+    }
   };
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
       {/* Header */}
       <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              📥 Request Queue
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Pending service requests from consumers
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/3 dark:hover:text-gray-200">
-              <svg
-                className="stroke-current fill-white dark:fill-gray-800"
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M2.29004 5.90393H17.7067"
-                  stroke=""
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M17.7075 14.0961H2.29085"
-                  stroke=""
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M12.0826 3.33331C13.5024 3.33331 14.6534 4.48431 14.6534 5.90414C14.6534 7.32398 13.5024 8.47498 12.0826 8.47498C10.6627 8.47498 9.51172 7.32398 9.51172 5.90415C9.51172 4.48432 10.6627 3.33331 12.0826 3.33331Z"
-                  fill=""
-                  stroke=""
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M7.91745 11.525C6.49762 11.525 5.34662 12.676 5.34662 14.0959C5.34661 15.5157 6.49762 16.6667 7.91745 16.6667C9.33728 16.6667 10.4883 15.5157 10.4883 14.0959C10.4883 12.676 9.33728 11.525 7.91745 11.525Z"
-                  fill=""
-                  stroke=""
-                  strokeWidth="1.5"
-                />
-              </svg>
-              Filter
-            </button>
-          </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            📥 Pending Requests
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Accept or reject service requests from consumers
+          </p>
         </div>
       </div>
 
-      {/* Request List */}
-      <div className="p-4 sm:p-6">
-        <div className="space-y-4">
-          {requestData.map((request) => (
-            <div
-              key={request.id}
-              className="p-4 border border-gray-200 rounded-xl dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
+      {/* Content */}
+      <div className="p-6">
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">Loading requests...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500 dark:text-red-400">Error: {error}</p>
+            <Button 
+              onClick={fetchRequests} 
+              variant="outline" 
+              size="sm" 
+              className="mt-4"
             >
-              <div className="flex flex-col gap-4 lg:flex-row">
-                {/* Request Info */}
-                <div className="flex-1">
+              Try Again
+            </Button>
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">No pending requests</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+              All requests have been accepted or closed
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Requests List */}
+            <div className="space-y-4">
+              {requests.map((request) => (
+                <div
+                  key={request.id}
+                  onClick={() => setSelectedRequest(request)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                    selectedRequest?.id === request.id
+                      ? "bg-blue-50 border-blue-300 dark:bg-blue-900/20 dark:border-blue-600"
+                      : "bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-gray-800 dark:text-white/90">
-                        {request.consumerName}
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge 
+                          color={getStatusBadgeColor(request.status)}
+                          variant="light"
+                        >
+                          {request.status.toUpperCase()}
+                        </Badge>
+                        <span className={`text-xs px-2 py-1 rounded font-medium ${getPriorityColor(request.priority)}`}>
+                          {request.priority.toUpperCase()}
+                        </span>
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white text-sm">
+                        {request.title}
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {request.id} • {request.timestamp}
-                      </p>
                     </div>
-                    <Badge
-                      color={
-                        request.priority === "high"
-                          ? "error"
-                          : request.priority === "medium"
-                          ? "warning"
-                          : "light"
-                      }
-                    >
-                      {request.priority.toUpperCase()}
-                    </Badge>
+                    {request.photo_url && (
+                      <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded">
+                        📷
+                      </span>
+                    )}
                   </div>
-
-                  <p className="mb-2 text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
                     {request.description}
                   </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    📍 {request.location}
+                  </p>
+                </div>
+              ))}
+            </div>
 
-                  <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                    <svg
-                      className="size-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+            {/* Selected Request Details */}
+            {selectedRequest && (
+              <div className="space-y-4">
+                {/* Map */}
+                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 h-64 bg-gray-100 dark:bg-gray-800">
+                  {selectedRequest.latitude && selectedRequest.longitude ? (
+                    <MapContainer
+                      center={[selectedRequest.latitude, selectedRequest.longitude]}
+                      zoom={15}
+                      style={{ width: "100%", height: "100%" }}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    {request.location}
-                  </div>
-
-                  {request.image && (
-                    <div className="mt-3">
-                      <div className="relative w-full h-32 overflow-hidden bg-gray-100 rounded-lg dark:bg-gray-800">
-                        <Image
-                          src={request.image}
-                          alt="Fault photo"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
+                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                      <Marker position={[selectedRequest.latitude, selectedRequest.longitude]}>
+                        <Popup>{selectedRequest.location}</Popup>
+                      </Marker>
+                    </MapContainer>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                      <p className="text-gray-500 dark:text-gray-400">📍 Location coordinates not available</p>
                     </div>
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-row gap-2 lg:flex-col lg:w-32">
-                  <button
-                    onClick={() => handleAccept(request.id)}
-                    className="flex items-center justify-center flex-1 gap-1.5 px-4 py-2.5 text-sm font-medium text-white rounded-lg bg-success-500 hover:bg-success-600 transition-colors"
-                  >
-                    <svg
-                      className="size-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleReject(request.id)}
-                    className="flex items-center justify-center flex-1 gap-1.5 px-4 py-2.5 text-sm font-medium text-white rounded-lg bg-error-500 hover:bg-error-600 transition-colors"
-                  >
-                    <svg
-                      className="size-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => handleViewLocation(request.location)}
-                    className="flex items-center justify-center flex-1 gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <svg
-                      className="size-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                      />
-                    </svg>
-                    Map
-                  </button>
+                {/* Details */}
+                <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">REQUEST ID</p>
+                    <p className="font-mono text-sm text-gray-800 dark:text-white">
+                      {selectedRequest.id.substring(0, 12)}...
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">TITLE</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white">
+                      {selectedRequest.title}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">DESCRIPTION</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {selectedRequest.description}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">LOCATION</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      📍 {selectedRequest.location}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">SUBMITTED</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      🕒 {formatDate(selectedRequest.created_at)}
+                    </p>
+                  </div>
+
+                  {selectedRequest.photo_url && (
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">PHOTO</p>
+                      <Button 
+                        onClick={() => window.open(selectedRequest.photo_url, '_blank')}
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                      >
+                        📷 View Photo
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="pt-2 flex gap-2">
+                    {selectedRequest.status === "open" ? (
+                      <>
+                        <Button
+                          onClick={() => handleAccept(selectedRequest.id)}
+                          variant="primary"
+                          className="flex-1"
+                          disabled={actionLoading === selectedRequest.id}
+                        >
+                          {actionLoading === selectedRequest.id ? "Accepting..." : "✅ Accept"}
+                        </Button>
+                        <Button
+                          onClick={() => handleReject(selectedRequest.id)}
+                          variant="outline"
+                          className="flex-1"
+                          disabled={actionLoading === selectedRequest.id}
+                        >
+                          ❌ Reject
+                        </Button>
+                      </>
+                    ) : selectedRequest.status !== "closed" ? (
+                      <Link href={`/electrician/chat/${selectedRequest.id}`} className="w-full">
+                        <Button variant="primary" className="w-full">
+                          💬 Chat with Consumer
+                        </Button>
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2 w-full">
+                        Request is closed
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {requestData.length === 0 && (
-          <div className="py-12 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              No pending requests at the moment
-            </p>
+            )}
           </div>
         )}
       </div>
