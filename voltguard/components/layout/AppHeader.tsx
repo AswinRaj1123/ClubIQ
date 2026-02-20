@@ -3,12 +3,15 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
+import { authAPI } from "@/lib/api";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
   const pathname = usePathname();
+  const [dashboardLink, setDashboardLink] = useState("/");
 
   const toggleApplicationMenu = () => {
     setApplicationMenuOpen(!isApplicationMenuOpen);
@@ -17,6 +20,14 @@ const AppHeader: React.FC = () => {
 
   // Check if on consumer route
   const isConsumerRoute = pathname.includes("/consumer/");
+
+  // Set dashboard link based on user role
+  useEffect(() => {
+    const user = authAPI.getUser();
+    if (user?.role) {
+      setDashboardLink(`/${user.role}`);
+    }
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -37,7 +48,7 @@ const AppHeader: React.FC = () => {
     <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
       <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
         <div className="flex items-center justify-between w-full gap-2 px-3 py-3 border-b border-gray-200 dark:border-gray-800 sm:gap-4 lg:border-b-0 lg:px-0 lg:py-4">
-          <Link href="/dashboard" className="lg:hidden">
+          <Link href={dashboardLink} className="lg:hidden">
             <svg
               width="154"
               height="32"
@@ -65,26 +76,17 @@ const AppHeader: React.FC = () => {
           </Link>
 
           <Link
-            href="/dashboard"
-            className={`${
-              isConsumerRoute ? "hidden" : "hidden"
-            } items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:flex`}
-            title="Back to Dashboard"
+            href={dashboardLink}
+            className="hidden lg:flex items-center justify-center h-10 rounded-lg z-99999 hover:opacity-80 transition-opacity"
+            title="VoltGuard Dashboard"
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M10.5858 3.58579C11.3668 2.80474 12.6332 2.80474 13.4142 3.58579L20.4142 10.5858C21.1953 11.3668 21.1953 12.6332 20.4142 13.4142L13.4142 20.4142C12.6332 21.1953 11.3668 21.1953 10.5858 20.4142C9.80474 19.6332 9.80474 18.3668 10.5858 17.5858L15.1716 13H4C2.89543 13 2 12.1046 2 11C2 9.89543 2.89543 9 4 9H15.1716L10.5858 4.41421C9.80474 3.63316 9.80474 2.36684 10.5858 1.58579Z"
-                fill="currentColor"
-              />
-            </svg>
+            <Image
+              src="/images/logo/voltguard-logo.png"
+              alt="VoltGuard Logo"
+              width={120}
+              height={40}
+              className="object-contain"
+            />
           </Link>
 
           <button

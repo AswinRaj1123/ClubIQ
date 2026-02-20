@@ -7,7 +7,7 @@ class SignUpRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, description="Password must be at least 6 characters")
     full_name: str = Field(..., min_length=2)
-    role: str = Field(default="consumer", pattern="^(consumer|electrician|admin)$")
+    role: str = Field(default="consumer", pattern="^(consumer|electrician|lineman)$")
     phone: Optional[str] = None
     company: Optional[str] = None
 
@@ -24,6 +24,11 @@ class UserResponse(BaseModel):
     role: str
     phone: Optional[str] = None
     company: Optional[str] = None
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    country: Optional[str] = None
     is_active: bool
     created_at: datetime
     

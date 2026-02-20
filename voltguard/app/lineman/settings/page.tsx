@@ -1,8 +1,8 @@
 import { PageBreadCrumb } from "@/components/common";
 
 export const metadata = {
-  title: "Settings - VoltGuard Admin",
-  description: "Admin panel settings and configuration",
+  title: "Settings - VoltGuard Lineman",
+  description: "Lineman panel settings and configuration",
 };
 
 export default function SettingsPage() {
@@ -23,7 +23,7 @@ export default function SettingsPage() {
                   </label>
                   <input
                     type="text"
-                    defaultValue="VoltGuard Administration"
+                    defaultValue="VoltGuard Lineman"
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>

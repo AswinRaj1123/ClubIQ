@@ -25,7 +25,7 @@ async def get_all_fault_requests(
     """
     try:
         # Verify user is electrician
-        if current_user.get("role") not in ["electrician", "admin"]:
+        if current_user.get("role") not in ["electrician", "lineman"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only electricians can view fault requests"
@@ -45,24 +45,39 @@ async def get_all_fault_requests(
         )
         
         # Convert to response format
-        request_responses = [
-            FaultRequestResponse(
-                id=str(req["_id"]),
-                consumer_id=req["consumer_id"],
-                title=req["title"],
-                description=req["description"],
-                location=req["location"],
-                latitude=req.get("latitude"),
-                longitude=req.get("longitude"),
-                photo_url=req.get("photo_url"),
-                status=req["status"],
-                priority=req["priority"],
-                assigned_to=req.get("assigned_to"),
-                created_at=req["created_at"],
-                updated_at=req["updated_at"]
+        users_collection = db["users"]
+        request_responses = []
+        
+        for req in requests:
+            # Get electrician name if assigned_to exists
+            assigned_to_name = None
+            if req.get("assigned_to"):
+                try:
+                    from bson import ObjectId
+                    electrician = users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
+                    if electrician:
+                        assigned_to_name = electrician.get("full_name", "Unknown")
+                except:
+                    assigned_to_name = None
+            
+            request_responses.append(
+                FaultRequestResponse(
+                    id=str(req["_id"]),
+                    consumer_id=req["consumer_id"],
+                    title=req["title"],
+                    description=req["description"],
+                    location=req["location"],
+                    latitude=req.get("latitude"),
+                    longitude=req.get("longitude"),
+                    photo_url=req.get("photo_url"),
+                    status=req["status"],
+                    priority=req["priority"],
+                    assigned_to=req.get("assigned_to"),
+                    assigned_to_name=assigned_to_name,
+                    created_at=req["created_at"],
+                    updated_at=req["updated_at"]
+                )
             )
-            for req in requests
-        ]
         
         return FaultRequestList(requests=request_responses, total=len(request_responses))
     except HTTPException:
@@ -85,13 +100,14 @@ async def get_fault_request(
     """
     try:
         # Verify user is electrician
-        if current_user.get("role") not in ["electrician", "admin"]:
+        if current_user.get("role") not in ["electrician", "lineman"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only electricians can view fault requests"
             )
         
         fault_requests_collection = db["fault_requests"]
+        users_collection = db["users"]
         
         request_doc = fault_requests_collection.find_one({
             "_id": ObjectId(request_id)
@@ -102,6 +118,16 @@ async def get_fault_request(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Fault request not found"
             )
+        
+        # Get electrician name if assigned_to exists
+        assigned_to_name = None
+        if request_doc.get("assigned_to"):
+            try:
+                electrician = users_collection.find_one({"_id": ObjectId(request_doc.get("assigned_to"))})
+                if electrician:
+                    assigned_to_name = electrician.get("full_name", "Unknown")
+            except:
+                assigned_to_name = None
         
         return FaultRequestResponse(
             id=str(request_doc["_id"]),
@@ -115,6 +141,7 @@ async def get_fault_request(
             status=request_doc["status"],
             priority=request_doc["priority"],
             assigned_to=request_doc.get("assigned_to"),
+            assigned_to_name=assigned_to_name,
             created_at=request_doc["created_at"],
             updated_at=request_doc["updated_at"]
         )
@@ -139,7 +166,7 @@ async def assign_fault_request(
     """
     try:
         # Verify user is electrician
-        if current_user.get("role") not in ["electrician", "admin"]:
+        if current_user.get("role") not in ["electrician", "lineman"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only electricians can assign fault requests"
@@ -191,13 +218,14 @@ async def get_my_assignments(
     """
     try:
         # Verify user is electrician
-        if current_user.get("role") not in ["electrician", "admin"]:
+        if current_user.get("role") not in ["electrician", "lineman"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only electricians can view assignments"
             )
         
         fault_requests_collection = db["fault_requests"]
+        users_collection = db["users"]
         
         # Build query
         query = {"assigned_to": str(current_user.get("_id"))}
@@ -211,23 +239,38 @@ async def get_my_assignments(
         )
         
         # Convert to response format
-        request_responses = [
-            FaultRequestResponse(
-                id=str(req["_id"]),
-                consumer_id=req["consumer_id"],
-                title=req["title"],
-                description=req["description"],
-                location=req["location"],
-                latitude=req.get("latitude"),
-                longitude=req.get("longitude"),
-                photo_url=req.get("photo_url"),
-                status=req["status"],
-                priority=req["priority"],
-                assigned_to=req.get("assigned_to"),
-                created_at=req["created_at"],
-                updated_at=req["updated_at"]
+        request_responses = []
+        
+        for req in requests:
+            # Get electrician name if assigned_to exists
+            assigned_to_name = None
+            if req.get("assigned_to"):
+                try:
+                    from bson import ObjectId
+                    electrician = users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
+                    if electrician:
+                        assigned_to_name = electrician.get("full_name", "Unknown")
+                except:
+                    assigned_to_name = None
+            
+            request_responses.append(
+                FaultRequestResponse(
+                    id=str(req["_id"]),
+                    consumer_id=req["consumer_id"],
+                    title=req["title"],
+                    description=req["description"],
+                    location=req["location"],
+                    latitude=req.get("latitude"),
+                    longitude=req.get("longitude"),
+                    photo_url=req.get("photo_url"),
+                    status=req["status"],
+                    priority=req["priority"],
+                    assigned_to=req.get("assigned_to"),
+                    assigned_to_name=assigned_to_name,
+                    created_at=req["created_at"],
+                    updated_at=req["updated_at"]
+                )
             )
-            for req in requests
         ]
         
         return FaultRequestList(requests=request_responses, total=len(request_responses))

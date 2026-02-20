@@ -20,7 +20,7 @@ interface FaultRequest {
   updated_at: string;
 }
 
-export default function MyRequests() {
+export default function PastRequests() {
   const [requests, setRequests] = useState<FaultRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export default function MyRequests() {
       setIsLoading(true);
       setError(null);
       const response = await faultAPI.getMyFaultRequests();
-      console.log("Fetched requests:", response);
+      console.log("Fetched past requests:", response);
       setRequests(response.requests);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load requests";
@@ -44,6 +44,11 @@ export default function MyRequests() {
       setIsLoading(false);
     }
   };
+
+  // Filter for only resolved and closed (past/completed) requests
+  const pastRequests = requests.filter(
+    (req) => req.status === "resolved" || req.status === "closed"
+  );
 
   const getStatusColor = (
     status: string
@@ -105,20 +110,15 @@ export default function MyRequests() {
     }
   };
 
-  // Filter for only assigned and in_progress (active/live) requests
-  const activeRequests = requests.filter(
-    (req) => req.status === "assigned" || req.status === "in_progress"
-  );
-
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
       {/* Card Header */}
       <div className="px-6 py-5">
         <h3 className="text-base font-medium text-gray-800 dark:text-white/90">
-          ⚡ My Requests
+          📜 Past Requests
         </h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Track your active and live fault requests
+          View your completed and resolved requests
         </p>
       </div>
 
@@ -140,81 +140,82 @@ export default function MyRequests() {
               Try Again
             </Button>
           </div>
-        ) : activeRequests.length === 0 ? (
+        ) : pastRequests.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">No active requests</p>
+            <p className="text-gray-500 dark:text-gray-400">No past requests</p>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-              Raise a fault request or check Past Requests for completed items
+              Your completed requests will appear here
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {activeRequests.map((request) => (
+            {pastRequests.map((request) => (
               <div
                 key={request.id}
-                className="p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:shadow-theme-md transition-all duration-300"
+                className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:shadow-theme-md transition-all duration-300 overflow-hidden"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-mono bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-gray-700 dark:text-gray-300">
-                        {request.id.substring(0, 8)}
-                      </span>
-                      <Badge 
-                        variant="light" 
-                        color={getStatusColor(request.status)}
-                      >
-                        {getStatusIcon(request.status)} {request.status.toUpperCase()}
-                      </Badge>
-                      <span className={`text-xs px-2 py-1 rounded font-medium ${getPriorityColor(request.priority)}`}>
-                        {request.priority.toUpperCase()}
-                      </span>
-                    </div>
-                    <h4 className="text-base font-semibold text-gray-800 dark:text-white mb-2">
+                <div className="flex flex-col gap-3">
+                  {/* Top Section: ID, Badges */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-mono bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-gray-700 dark:text-gray-300 flex-shrink-0">
+                      {request.id.substring(0, 8)}
+                    </span>
+                    <Badge 
+                      variant="light" 
+                      color={getStatusColor(request.status)}
+                    >
+                      {getStatusIcon(request.status)} {request.status.toUpperCase()}
+                    </Badge>
+                    <span className={`text-xs px-2 py-1 rounded font-medium flex-shrink-0 ${getPriorityColor(request.priority)}`}>
+                      {request.priority.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* Middle Section: Title & Description */}
+                  <div>
+                    <h4 className="text-base font-semibold text-gray-800 dark:text-white mb-1">
                       {request.title}
                     </h4>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
                       {request.description}
                     </p>
-                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      <p>📍 {request.location}</p>
-                      <p>🕒 {formatDate(request.created_at)}</p>
-                      {request.assigned_to_name && (
-                        <p>👨‍🔧 Assigned to: {request.assigned_to_name}</p>
-                      )}
-                    </div>
                   </div>
-                  <div className="flex gap-2">
+
+                  {/* Details Section */}
+                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                    <p>📍 {request.location}</p>
+                    <p>🕒 {formatDate(request.created_at)}</p>
+                    {request.assigned_to_name && (
+                      <p>👨‍🔧 Was assigned to: {request.assigned_to_name}</p>
+                    )}
+                  </div>
+
+                  {/* Bottom Section: Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <Link href={`/consumer/chat/${request.id}`} className="flex-1 sm:flex-none">
+                      <Button size="sm" variant="outline" className="w-full sm:w-auto">
+                        💬 View Chat
+                      </Button>
+                    </Link>
                     {request.photo_url && (
                       <Button 
                         onClick={() => window.open(request.photo_url, '_blank')}
                         size="sm" 
                         variant="outline"
+                        className="flex-1 sm:flex-none"
                       >
                         📷 View Photo
                       </Button>
                     )}
-                    {request.status !== "open" && request.status !== "closed" && (
-                      <Link href={`/consumer/chat/${request.id}`}>
-                        <Button size="sm" variant="primary">
-                          💬 Chat
-                        </Button>
-                      </Link>
-                    )}
-                    {request.status === "open" && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 italic">
-                        Waiting for electrician to accept...
-                      </div>
-                    )}
                   </div>
+
+                  {/* Photo Info */}
+                  {request.photo_url && (
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      📷 <span className="font-medium">Photo available</span>
+                    </div>
+                  )}
                 </div>
-                {request.photo_url && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      📷 <span className="font-medium">Photo uploaded</span> - click "View Photo" button to preview
-                    </p>
-                  </div>
-                )}
               </div>
             ))}
           </div>

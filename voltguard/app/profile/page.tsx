@@ -23,8 +23,8 @@ export default function ProfilePage() {
         // Redirect based on user role
         if (user.role === "electrician") {
           router.replace("/electrician/profile");
-        } else if (user.role === "admin") {
-          router.replace("/admin/profile");
+        } else if (user.role === "lineman") {
+          router.replace("/lineman/profile");
         } else {
           router.replace("/consumer/profile");
         }

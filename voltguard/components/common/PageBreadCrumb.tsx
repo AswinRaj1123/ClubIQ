@@ -16,7 +16,7 @@ export const PageBreadCrumb: React.FC<PageBreadCrumbProps> = ({ pageName }) => {
           <li>
             <Link
               className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400"
-              href="/admin/dashboard"
+              href="/lineman/dashboard"
             >
               Dashboard
               <svg

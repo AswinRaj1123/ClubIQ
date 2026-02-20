@@ -30,10 +30,19 @@ export default function ConsumerProfile() {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     full_name: "",
     email: "",
     phone: "",
+  });
+  const [editAddressData, setEditAddressData] = useState({
+    street_address: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "",
   });
 
   useEffect(() => {
@@ -57,6 +66,13 @@ export default function ConsumerProfile() {
           email: userData.email,
           phone: userData.phone || "",
         });
+        setEditAddressData({
+          street_address: userData.street_address || "",
+          city: userData.city || "",
+          state: userData.state || "",
+          postal_code: userData.postal_code || "",
+          country: userData.country || "",
+        });
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to load user data";
         setError(errorMessage);
@@ -77,23 +93,98 @@ export default function ConsumerProfile() {
     }));
   };
 
-  const handleSave = () => {
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditAddressData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSave = async () => {
     if (user) {
-      const updatedUser = {
-        ...user,
-        full_name: editFormData.full_name,
-        email: editFormData.email,
-        phone: editFormData.phone,
-      };
-      setUser(updatedUser);
-      authAPI.saveUser(updatedUser);
-      closeModal();
+      try {
+        setIsSaving(true);
+        setSavedMessage(null);
+        setError(null);
+        
+        console.log("[DEBUG] Saving profile with data:", editFormData);
+        
+        // Call the update profile API
+        const updatedUserData = await authAPI.updateProfile({
+          full_name: editFormData.full_name,
+          email: editFormData.email,
+          phone: editFormData.phone,
+        });
+        
+        console.log("[DEBUG] Profile updated:", updatedUserData);
+        
+        // Update local state
+        const updatedUser = {
+          ...user,
+          full_name: updatedUserData.full_name,
+          email: updatedUserData.email,
+          phone: updatedUserData.phone,
+        };
+        setUser(updatedUser);
+        setSavedMessage("Profile updated successfully!");
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => setSavedMessage(null), 3000);
+        closeModal();
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to update profile";
+        console.error("[ERROR] Error updating profile:", errorMessage);
+        setError(`Update failed: ${errorMessage}`);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
-  const handleAddressSave = () => {
-    console.log("Saving address changes...");
-    closeAddressModal();
+  const handleAddressSave = async () => {
+    if (user) {
+      try {
+        setIsSaving(true);
+        setSavedMessage(null);
+        setError(null);
+        
+        console.log("[DEBUG] Saving address with data:", editAddressData);
+        
+        // Call the update profile API with address data
+        const updatedUserData = await authAPI.updateProfile({
+          street_address: editAddressData.street_address,
+          city: editAddressData.city,
+          state: editAddressData.state,
+          postal_code: editAddressData.postal_code,
+          country: editAddressData.country,
+        });
+        
+        console.log("[DEBUG] Address updated:", updatedUserData);
+        
+        // Update local state
+        const updatedUser = {
+          ...user,
+          street_address: updatedUserData.street_address,
+          city: updatedUserData.city,
+          state: updatedUserData.state,
+          postal_code: updatedUserData.postal_code,
+          country: updatedUserData.country,
+        };
+        setUser(updatedUser);
+        setSavedMessage("Address updated successfully!");
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => setSavedMessage(null), 3000);
+        closeAddressModal();
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to update address";
+        console.error("[ERROR] Error updating address:", errorMessage);
+        setError(`Update failed: ${errorMessage}`);
+      } finally {
+        setIsSaving(false);
+      }
+    }
   };
 
   if (loading) {
@@ -117,6 +208,13 @@ export default function ConsumerProfile() {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {savedMessage && (
+        <div className="p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg dark:bg-green-900/30 dark:border-green-700 dark:text-green-400">
+          <p className="font-semibold">{savedMessage}</p>
+        </div>
+      )}
+
       {/* Personal Information Card */}
       <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -202,16 +300,25 @@ export default function ConsumerProfile() {
                   Street Address
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  123 Main Street, Apartment 4B
+                  {user?.street_address || "Not provided"}
                 </p>
               </div>
 
               <div>
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  City/State
+                  City
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  New York, NY
+                  {user?.city || "Not provided"}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                  State
+                </p>
+                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                  {user?.state || "Not provided"}
                 </p>
               </div>
 
@@ -220,7 +327,7 @@ export default function ConsumerProfile() {
                   Postal Code
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  10001
+                  {user?.postal_code || "Not provided"}
                 </p>
               </div>
 
@@ -229,7 +336,7 @@ export default function ConsumerProfile() {
                   Country
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  United States
+                  {user?.country || "Not provided"}
                 </p>
               </div>
             </div>
@@ -297,6 +404,11 @@ export default function ConsumerProfile() {
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
               Update your details to keep your profile up-to-date.
             </p>
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg dark:bg-red-900/30 dark:border-red-700 dark:text-red-400 text-sm">
+                {error}
+              </div>
+            )}
           </div>
           <form className="flex flex-col">
             <div className="custom-scrollbar h-112.5 overflow-y-auto px-2 pb-3">
@@ -342,11 +454,11 @@ export default function ConsumerProfile() {
               </div>
             </div>
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeModal}>
+              <Button size="sm" variant="outline" onClick={closeModal} disabled={isSaving}>
                 Close
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                Save Changes
+              <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>
@@ -367,6 +479,16 @@ export default function ConsumerProfile() {
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
               Update your address details.
             </p>
+            {error && (
+              <div className="p-3 mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
+                {error}
+              </div>
+            )}
+            {savedMessage && (
+              <div className="p-3 mb-4 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                {savedMessage}
+              </div>
+            )}
           </div>
           <form className="flex flex-col">
             <div className="px-2 overflow-y-auto custom-scrollbar">
@@ -375,37 +497,64 @@ export default function ConsumerProfile() {
                   <Label>Street Address</Label>
                   <Input
                     type="text"
-                    defaultValue="123 Main Street, Apartment 4B"
+                    name="street_address"
+                    value={editAddressData.street_address}
+                    onChange={handleAddressChange}
+                    placeholder="Enter street address"
                   />
                 </div>
 
                 <div>
                   <Label>City</Label>
-                  <Input type="text" defaultValue="New York" />
+                  <Input 
+                    type="text" 
+                    name="city"
+                    value={editAddressData.city}
+                    onChange={handleAddressChange}
+                    placeholder="Enter city"
+                  />
                 </div>
 
                 <div>
                   <Label>State</Label>
-                  <Input type="text" defaultValue="NY" />
+                  <Input 
+                    type="text" 
+                    name="state"
+                    value={editAddressData.state}
+                    onChange={handleAddressChange}
+                    placeholder="Enter state"
+                  />
                 </div>
 
                 <div>
                   <Label>Postal Code</Label>
-                  <Input type="text" defaultValue="10001" />
+                  <Input 
+                    type="text" 
+                    name="postal_code"
+                    value={editAddressData.postal_code}
+                    onChange={handleAddressChange}
+                    placeholder="Enter postal code"
+                  />
                 </div>
 
                 <div>
                   <Label>Country</Label>
-                  <Input type="text" defaultValue="United States" />
+                  <Input 
+                    type="text" 
+                    name="country"
+                    value={editAddressData.country}
+                    onChange={handleAddressChange}
+                    placeholder="Enter country"
+                  />
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeAddressModal}>
+              <Button size="sm" variant="outline" onClick={closeAddressModal} disabled={isSaving}>
                 Close
               </Button>
-              <Button size="sm" onClick={handleAddressSave}>
-                Save Changes
+              <Button size="sm" onClick={handleAddressSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>

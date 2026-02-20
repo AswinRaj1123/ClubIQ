@@ -1,7 +1,7 @@
 import { PageBreadCrumb } from "@/components/common";
 
 export const metadata = {
-  title: "Analytics - VoltGuard Admin",
+  title: "Analytics - VoltGuard Lineman",
   description: "View detailed analytics and performance metrics",
 };
 

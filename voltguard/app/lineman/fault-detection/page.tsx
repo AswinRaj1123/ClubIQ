@@ -1,7 +1,7 @@
 import { PageBreadCrumb } from "@/components/common";
 
 export const metadata = {
-  title: "Fault Detection - VoltGuard Admin",
+  title: "Fault Detection - VoltGuard Lineman",
   description: "Monitor and analyze detected faults and issues",
 };
 

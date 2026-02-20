@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import ElectricianMetrics from "@/components/electrician/ElectricianMetrics";
 import RequestQueue from "@/components/electrician/RequestQueue";
+import CurrentActiveRequest from "@/components/electrician/CurrentActiveRequest";
 import ActiveSession from "@/components/electrician/ActiveSession";
 import ElectricianGuard from "@/components/electrician/ElectricianGuard";
 import React from "react";
 
 export const metadata: Metadata = {
   title: "Electrician Dashboard - VoltGuard",
-  description: "Manage service requests and active sessions",
+  description: "Manage service requests and view request history",
 };
 
 export default function ElectricianDashboard() {
@@ -22,7 +23,8 @@ export default function ElectricianDashboard() {
           <RequestQueue />
         </div>
 
-        <div className="col-span-12 xl:col-span-5">
+        <div className="col-span-12 xl:col-span-5 space-y-6">
+          <CurrentActiveRequest />
           <ActiveSession />
         </div>
       </div>

@@ -149,7 +149,7 @@ voltguard-backend/
 - ✅ User Sign In with password verification
 - ✅ JWT-based authentication
 - ✅ Password hashing with bcrypt
-- ✅ Role-based user types (consumer, electrician, admin)
+- ✅ Role-based user types (consumer, electrician, lineman)
 - ✅ MongoDB integration
 - ✅ CORS enabled for frontend integration
 - ✅ Interactive API documentation

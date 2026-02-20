@@ -27,6 +27,7 @@ class FaultRequestResponse(BaseModel):
     status: str
     priority: str
     assigned_to: Optional[str] = None
+    assigned_to_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     

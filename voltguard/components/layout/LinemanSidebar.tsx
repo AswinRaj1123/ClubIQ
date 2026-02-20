@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 type NavItem = {
@@ -17,7 +18,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     name: "Dashboard",
-    path: "/admin/dashboard",
+    path: "/lineman/dashboard",
   },
   {
     icon: (
@@ -26,7 +27,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     name: "Flight Map",
-    path: "/admin/flight-map",
+    path: "/lineman/flight-map",
   },
   {
     icon: (
@@ -35,7 +36,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     name: "Autonomous Control",
-    path: "/admin/autonomous-control",
+    path: "/lineman/autonomous-control",
   },
   {
     icon: (
@@ -44,7 +45,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     name: "Fault Detection",
-    path: "/admin/fault-detection",
+    path: "/lineman/fault-detection",
   },
   {
     icon: (
@@ -53,7 +54,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     name: "Analytics",
-    path: "/admin/analytics",
+    path: "/lineman/analytics",
   },
   {
     icon: (
@@ -62,7 +63,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     name: "Cost Analysis",
-    path: "/admin/cost-analysis",
+    path: "/lineman/cost-analysis",
   },
   {
     icon: (
@@ -72,11 +73,11 @@ const navItems: NavItem[] = [
       </svg>
     ),
     name: "Settings",
-    path: "/admin/settings",
+    path: "/lineman/settings",
   },
 ];
 
-export default function AdminSidebar() {
+export default function LinemanSidebar() {
   const pathname = usePathname();
 
   const isActive = (path: string) => {
@@ -87,17 +88,16 @@ export default function AdminSidebar() {
     <aside className="fixed left-0 top-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto z-40">
       {/* Logo Section */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-500">
-            <svg className="size-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-800 dark:text-white">VoltGuard</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Admin Panel</p>
-          </div>
-        </div>
+        <Link href="/lineman/dashboard" className="flex items-center justify-center">
+          <Image
+            src="/images/logo/voltguard-logo.png"
+            alt="VoltGuard Logo"
+            width={120}
+            height={40}
+            className="object-contain"
+          />
+        </Link>
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">Lineman Dashboard</p>
       </div>
 
       {/* Navigation Items */}
@@ -130,7 +130,7 @@ export default function AdminSidebar() {
             Need Help?
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-            Check our documentation for admin features.
+            Check our documentation for lineman features.
           </p>
           <button className="w-full px-3 py-2 text-xs font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 transition-colors">
             View Docs

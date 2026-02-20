@@ -18,7 +18,7 @@ async def signup(req: SignUpRequest):
     - **email**: User email (must be unique)
     - **password**: Password (minimum 6 characters)
     - **full_name**: Full name of the user
-    - **role**: User role (consumer, electrician, admin) - default: consumer
+    - **role**: User role (consumer, electrician, lineman) - default: consumer
     - **phone**: Optional phone number
     - **company**: Optional company name
     """
@@ -246,4 +246,175 @@ async def update_user_role(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error updating role: {str(e)}"
+        )
+
+
+@router.put("/update-profile", response_model=UserResponse)
+async def update_user_profile(
+    full_name: Optional[str] = None,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
+    company: Optional[str] = None,
+    street_address: Optional[str] = None,
+    city: Optional[str] = None,
+    state: Optional[str] = None,
+    postal_code: Optional[str] = None,
+    country: Optional[str] = None,
+    current_user = Depends(get_current_user),
+):
+    """
+    Update current user's profile information
+    
+    - **email**: New email address (optional)
+    - **full_name**: New full name (optional)
+    - **phone**: New phone number (optional)
+    - **company**: New company name (optional)
+    - **street_address**: Street address (optional)
+    - **city**: City (optional)
+    - **state**: State (optional)
+    - **postal_code**: Postal code (optional)
+    - **country**: Country (optional)
+    """
+    try:
+        # Debug: Log the type and content of current_user
+        print(f"[DEBUG] current_user type: {type(current_user)}")
+        print(f"[DEBUG] current_user value: {current_user}")
+        
+        # Extract user_id - current_user is a UserResponse object with 'id' field
+        user_id_str = None
+        user_email = None
+        
+        if isinstance(current_user, dict):
+            user_id_str = current_user.get("_id") or current_user.get("id")
+            user_email = current_user.get("email")
+            print(f"[DEBUG] Extracted from dict - user_id: {user_id_str}, email: {user_email}")
+        else:
+            # It's a Pydantic model (UserResponse), access as attributes
+            user_id_str = getattr(current_user, "id", None)
+            user_email = getattr(current_user, "email", None)
+            print(f"[DEBUG] Extracted from object - user_id: {user_id_str}, email: {user_email}")
+        
+        if not user_id_str:
+            print(f"[ERROR] Could not extract user_id from current_user")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not extract user ID from token"
+            )
+        
+        print(f"[DEBUG] Update profile called for user: {user_email}")
+        print(f"[DEBUG] User ID from token: {user_id_str} (type: {type(user_id_str)})")
+        print(f"[DEBUG] Data: full_name={full_name}, email={email}, phone={phone}, company={company}")
+        print(f"[DEBUG] Address: street={street_address}, city={city}, state={state}, postal={postal_code}, country={country}")
+        
+        # Convert user_id string to ObjectId
+        try:
+            user_object_id = ObjectId(user_id_str)
+            print(f"[DEBUG] Converted user_id to ObjectId: {user_object_id}")
+        except Exception as e:
+            print(f"[ERROR] Failed to convert user_id to ObjectId: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid user ID format: {str(e)}"
+            )
+        
+        db = get_db()
+        users_collection = db["users"]
+        
+        # Verify user exists
+        existing_user = users_collection.find_one({"_id": user_object_id})
+        if not existing_user:
+            print(f"[ERROR] User not found with ID: {user_object_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found in database"
+            )
+        
+        print(f"[DEBUG] Found user: {existing_user.get('email')}")
+        
+        # Prepare update data (only include provided fields)
+        update_data = {"updated_at": datetime.utcnow()}
+        
+        if email is not None and email.strip():
+            # Check if new email is already taken
+            existing_email_user = users_collection.find_one({
+                "email": email,
+                "_id": {"$ne": user_object_id}
+            })
+            if existing_email_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already in use"
+                )
+            update_data["email"] = email
+        
+        if full_name is not None and full_name.strip():
+            update_data["full_name"] = full_name
+        
+        if phone is not None and phone.strip():
+            update_data["phone"] = phone
+        
+        if company is not None and company.strip():
+            update_data["company"] = company
+        
+        if street_address is not None and street_address.strip():
+            update_data["street_address"] = street_address
+        
+        if city is not None and city.strip():
+            update_data["city"] = city
+        
+        if state is not None and state.strip():
+            update_data["state"] = state
+        
+        if postal_code is not None and postal_code.strip():
+            update_data["postal_code"] = postal_code
+        
+        if country is not None and country.strip():
+            update_data["country"] = country
+        
+        print(f"[DEBUG] Update data: {update_data}")
+        
+        # Update user
+        result = users_collection.update_one(
+            {"_id": user_object_id},
+            {"$set": update_data}
+        )
+        
+        print(f"[DEBUG] Update result - Matched: {result.matched_count}, Modified: {result.modified_count}")
+        
+        # Fetch updated user
+        updated_user = users_collection.find_one({"_id": user_object_id})
+        
+        if not updated_user:
+            print(f"[ERROR] Failed to retrieve updated user after update")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to retrieve updated user"
+            )
+        
+        print(f"[DEBUG] Updated user: {updated_user.get('email')}, Address: {updated_user.get('street_address', 'N/A')}")
+        
+        return UserResponse(
+            id=str(updated_user["_id"]),
+            email=updated_user["email"],
+            full_name=updated_user["full_name"],
+            role=updated_user["role"],
+            phone=updated_user.get("phone"),
+            company=updated_user.get("company"),
+            street_address=updated_user.get("street_address"),
+            city=updated_user.get("city"),
+            state=updated_user.get("state"),
+            postal_code=updated_user.get("postal_code"),
+            country=updated_user.get("country"),
+            is_active=updated_user.get("is_active", True),
+            created_at=updated_user["created_at"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Error updating profile: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating profile: {str(e)}"
         )

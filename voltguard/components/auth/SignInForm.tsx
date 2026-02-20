@@ -60,8 +60,8 @@ export default function SignInForm() {
       // Redirect to dashboard based on role
       if (response.user.role === "electrician") {
         router.push("/electrician");
-      } else if (response.user.role === "admin") {
-        router.push("/admin");
+      } else if (response.user.role === "lineman") {
+        router.push("/lineman");
       } else {
         router.push("/consumer");
       }

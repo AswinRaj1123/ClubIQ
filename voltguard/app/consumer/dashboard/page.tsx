@@ -3,6 +3,7 @@
 import React from "react";
 import RaiseFaultRequest from "@/components/consumer/RaiseFaultRequest";
 import MyRequests from "@/components/consumer/MyRequests";
+import PastRequests from "@/components/consumer/PastRequests";
 import LiveLocationMap from "@/components/consumer/LiveLocationMap";
 import { SharedLocationProvider } from "@/context/SharedLocationContext";
 
@@ -15,14 +16,17 @@ export default function ConsumerDashboard() {
           {/* Raise Fault Request */}
           <RaiseFaultRequest />
 
-          {/* My Requests */}
+          {/* My Requests - Active/Live */}
           <MyRequests />
         </div>
 
         {/* Sidebar */}
-        <div className="col-span-12 xl:col-span-4">
+        <div className="col-span-12 space-y-6 xl:col-span-4">
           {/* Live Location Map */}
           <LiveLocationMap />
+          
+          {/* Past Requests - Completed */}
+          <PastRequests />
         </div>
       </div>
     </SharedLocationProvider>

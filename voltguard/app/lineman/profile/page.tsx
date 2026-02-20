@@ -3,7 +3,7 @@
 import React from "react";
 import ConsumerProfile from "@/components/consumer/ConsumerProfile";
 
-export default function AdminProfilePage() {
+export default function LinemanProfilePage() {
   return (
     <div className="max-w-5xl mx-auto">
       <ConsumerProfile />

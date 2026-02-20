@@ -219,6 +219,92 @@ export const authAPI = {
       throw new Error(errorMessage);
     }
   },
+
+  async updateProfile(data: {
+    email?: string;
+    full_name?: string;
+    phone?: string;
+    company?: string;
+    street_address?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  }): Promise<any> {
+    try {
+      const url = `${API_BASE_URL}/api/auth/update-profile`;
+      const token = this.getToken();
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      console.log("[DEBUG] Updating profile with data:", data);
+      console.log("[DEBUG] Using token:", token.substring(0, 20) + "...");
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (data.email) params.append("email", data.email);
+      if (data.full_name) params.append("full_name", data.full_name);
+      if (data.phone) params.append("phone", data.phone);
+      if (data.company) params.append("company", data.company);
+      if (data.street_address) params.append("street_address", data.street_address);
+      if (data.city) params.append("city", data.city);
+      if (data.state) params.append("state", data.state);
+      if (data.postal_code) params.append("postal_code", data.postal_code);
+      if (data.country) params.append("country", data.country);
+
+      const fullUrl = `${url}?${params.toString()}`;
+      console.log("[DEBUG] Full URL:", fullUrl);
+
+      const response = await fetch(fullUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("[DEBUG] Response status:", response.status);
+
+      if (!response.ok) {
+        let errorMessage = "Failed to update profile";
+        try {
+          const error: ApiError = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        console.error("[ERROR]", errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      console.log("[DEBUG] Profile updated successfully:", result);
+      
+      // Save updated user
+      const updatedUser = {
+        _id: result._id,
+        email: result.email,
+        full_name: result.full_name,
+        role: result.role,
+        phone: result.phone,
+        company: result.company,
+        street_address: result.street_address,
+        city: result.city,
+        state: result.state,
+        postal_code: result.postal_code,
+        country: result.country,
+        is_active: result.is_active,
+        created_at: result.created_at,
+      };
+      this.saveUser(updatedUser);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Network error";
+      console.error("[ERROR] Update profile error:", errorMessage);
+      throw new Error(errorMessage);
+    }
+  },
 };
 
 // Fault Request API

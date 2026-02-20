@@ -287,24 +287,39 @@ async def get_consumer_fault_requests(
         requests = list(fault_requests_collection.find(query).sort("created_at", -1))
         
         # Convert to response format
-        request_responses = [
-            FaultRequestResponse(
-                id=str(req["_id"]),
-                consumer_id=req["consumer_id"],
-                title=req["title"],
-                description=req["description"],
-                location=req["location"],
-                latitude=req.get("latitude"),
-                longitude=req.get("longitude"),
-                photo_url=req.get("photo_url"),
-                status=req["status"],
-                priority=req["priority"],
-                assigned_to=req.get("assigned_to"),
-                created_at=req["created_at"],
-                updated_at=req["updated_at"]
+        users_collection = db["users"]
+        request_responses = []
+        
+        for req in requests:
+            # Get electrician name if assigned_to exists
+            assigned_to_name = None
+            if req.get("assigned_to"):
+                try:
+                    from bson import ObjectId
+                    electrician = users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
+                    if electrician:
+                        assigned_to_name = electrician.get("full_name", "Unknown")
+                except:
+                    assigned_to_name = None
+            
+            request_responses.append(
+                FaultRequestResponse(
+                    id=str(req["_id"]),
+                    consumer_id=req["consumer_id"],
+                    title=req["title"],
+                    description=req["description"],
+                    location=req["location"],
+                    latitude=req.get("latitude"),
+                    longitude=req.get("longitude"),
+                    photo_url=req.get("photo_url"),
+                    status=req["status"],
+                    priority=req["priority"],
+                    assigned_to=req.get("assigned_to"),
+                    assigned_to_name=assigned_to_name,
+                    created_at=req["created_at"],
+                    updated_at=req["updated_at"]
+                )
             )
-            for req in requests
-        ]
         
         return FaultRequestList(requests=request_responses, total=len(request_responses))
     except Exception as e:

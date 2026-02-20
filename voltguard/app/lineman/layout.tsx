@@ -1,10 +1,10 @@
 "use client";
 
 import AppHeader from "@/components/layout/AppHeader";
-import AdminSidebar from "@/components/layout/AdminSidebar";
+import LinemanSidebar from "@/components/layout/LinemanSidebar";
 import React from "react";
 
-export default function AdminLayout({
+export default function LinemanLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <AdminSidebar />
+      <LinemanSidebar />
       
       {/* Main Content */}
       <div className="flex-1 ml-64">

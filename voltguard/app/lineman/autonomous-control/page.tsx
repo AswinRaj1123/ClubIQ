@@ -1,7 +1,7 @@
 import { PageBreadCrumb } from "@/components/common";
 
 export const metadata = {
-  title: "Autonomous Control - VoltGuard Admin",
+  title: "Autonomous Control - VoltGuard Lineman",
   description: "Manage drone autonomous operation settings and flight parameters",
 };
 

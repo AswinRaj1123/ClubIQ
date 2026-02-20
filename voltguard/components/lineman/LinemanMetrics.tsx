@@ -8,7 +8,7 @@ const ArrowUpIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function AdminMetrics() {
+export default function LinemanMetrics() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:gap-6">
       {/* <!-- Metric Item: Current Inspection --> */}

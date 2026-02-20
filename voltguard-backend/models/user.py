@@ -12,6 +12,11 @@ class User:
         role: str = "consumer",
         phone: str = None,
         company: str = None,
+        street_address: str = None,
+        city: str = None,
+        state: str = None,
+        postal_code: str = None,
+        country: str = None,
         is_active: bool = True,
         _id: ObjectId = None,
         created_at: datetime = None,
@@ -21,9 +26,14 @@ class User:
         self.email = email
         self.password_hash = password_hash
         self.full_name = full_name
-        self.role = role  # consumer, electrician, admin
+        self.role = role  # consumer, electrician, lineman
         self.phone = phone
         self.company = company
+        self.street_address = street_address
+        self.city = city
+        self.state = state
+        self.postal_code = postal_code
+        self.country = country
         self.is_active = is_active
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
@@ -38,6 +48,11 @@ class User:
             "role": self.role,
             "phone": self.phone,
             "company": self.company,
+            "street_address": self.street_address,
+            "city": self.city,
+            "state": self.state,
+            "postal_code": self.postal_code,
+            "country": self.country,
             "is_active": self.is_active,
             "created_at": self.created_at,
             "updated_at": self.updated_at
@@ -53,6 +68,11 @@ class User:
             role=data.get("role", "consumer"),
             phone=data.get("phone"),
             company=data.get("company"),
+            street_address=data.get("street_address"),
+            city=data.get("city"),
+            state=data.get("state"),
+            postal_code=data.get("postal_code"),
+            country=data.get("country"),
             is_active=data.get("is_active", True),
             _id=data.get("_id"),
             created_at=data.get("created_at"),
