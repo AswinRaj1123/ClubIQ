@@ -26,15 +26,6 @@ const navItems: NavItem[] = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 9" />
       </svg>
     ),
-    name: "Flight Map",
-    path: "/lineman/flight-map",
-  },
-  {
-    icon: (
-      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.352 5.361A1 1 0 016.172 4h11.656a1 1 0 01.82 1.361l-1.288 1.965a1 1 0 01-.82.439H7.46a1 1 0 01-.82-.439L5.352 5.36z" />
-      </svg>
-    ),
     name: "Autonomous Control",
     path: "/lineman/autonomous-control",
   },

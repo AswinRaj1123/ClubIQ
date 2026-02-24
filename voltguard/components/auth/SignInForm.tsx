@@ -62,6 +62,8 @@ export default function SignInForm() {
         router.push("/electrician");
       } else if (response.user.role === "lineman") {
         router.push("/lineman");
+      } else if (response.user.role === "tneb_board" || response.user.role === "tneb-board") {
+        router.push("/tneb-board");
       } else {
         router.push("/consumer");
       }

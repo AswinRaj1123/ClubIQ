@@ -24,9 +24,15 @@ const AppHeader: React.FC = () => {
   // Set dashboard link based on user role
   useEffect(() => {
     const user = authAPI.getUser();
-    if (user?.role) {
-      setDashboardLink(`/${user.role}`);
+    if (!user?.role) return;
+
+    const role = user.role;
+    if (role === "tneb_board" || role === "tneb-board") {
+      setDashboardLink("/tneb-board");
+      return;
     }
+
+    setDashboardLink(`/${role}`);
   }, []);
 
   useEffect(() => {

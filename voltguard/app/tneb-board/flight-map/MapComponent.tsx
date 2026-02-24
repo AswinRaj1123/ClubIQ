@@ -27,7 +27,7 @@ export default function MapComponent() {
     { name: "Coimbatore", coords: [11.0168, 76.9558], type: "power-station" },
     { name: "Madurai", coords: [9.9252, 78.1198], type: "power-station" },
     { name: "Trichy", coords: [10.7905, 78.7047], type: "power-station" },
-    { name: "Salem", coords: [11.6643, 78.1460], type: "power-station" },
+    { name: "Salem", coords: [11.6643, 78.146], type: "power-station" },
     { name: "Tirunelveli", coords: [8.7139, 77.7567], type: "power-station" },
     { name: "Vellore", coords: [12.9165, 79.1325], type: "power-station" },
   ];
@@ -45,7 +45,7 @@ export default function MapComponent() {
 
     // Add OpenStreetMap tiles
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '© OpenStreetMap contributors',
+      attribution: "© OpenStreetMap contributors",
       maxZoom: 19,
       className: "brightness-110 contrast-125",
     }).addTo(map);
@@ -62,24 +62,24 @@ export default function MapComponent() {
         // Prevent browser default zoom behavior
         e.preventDefault();
         e.stopPropagation();
-        
+
         // Only zoom if map is fully initialized
         if (!map._container || !map._loaded) {
           return;
         }
-        
+
         // Zoom the map
         const currentZoom = map.getZoom();
         const minZoom = map.getMinZoom();
         const maxZoom = map.getMaxZoom();
-        
+
         let newZoom: number;
         if (e.deltaY > 0) {
           newZoom = Math.max(currentZoom - 1, minZoom);
         } else {
           newZoom = Math.min(currentZoom + 1, maxZoom);
         }
-        
+
         if (newZoom !== currentZoom) {
           map.setZoom(newZoom);
         }
@@ -114,7 +114,9 @@ export default function MapComponent() {
         opacity: 1,
         fillOpacity: 0.9,
       })
-        .bindPopup(`<strong>${city.name}</strong><br/>Power Station<br/>${city.coords[0].toFixed(4)}°, ${city.coords[1].toFixed(4)}°`)
+        .bindPopup(
+          `<strong>${city.name}</strong><br/>Power Station<br/>${city.coords[0].toFixed(4)}°, ${city.coords[1].toFixed(4)}°`
+        )
         .addTo(map);
     });
 
@@ -140,7 +142,7 @@ export default function MapComponent() {
 
     // Add drones with custom styling
     const droneMarkers: L.CircleMarker[] = [];
-    drones.forEach((drone, index) => {
+    drones.forEach((drone) => {
       // Create a circle marker for the drone
       const marker = L.circleMarker([drone.coords[0], drone.coords[1]], {
         radius: 12,
@@ -150,7 +152,8 @@ export default function MapComponent() {
         opacity: 1,
         fillOpacity: 0.95,
       })
-        .bindPopup(`
+        .bindPopup(
+          `
           <div style="font-weight: bold; color: #10b981;">
             ${drone.id}
           </div>
@@ -159,7 +162,8 @@ export default function MapComponent() {
             Lat: ${drone.coords[0].toFixed(4)}°<br/>
             Lng: ${drone.coords[1].toFixed(4)}°
           </div>
-        `)
+        `
+        )
         .addTo(map);
 
       droneMarkers.push(marker);
@@ -172,25 +176,25 @@ export default function MapComponent() {
       // Update progress for each drone
       droneProgress = droneProgress.map((progress, droneIndex) => {
         let newProgress = progress + 0.002; // Speed of movement
-        
+
         // Calculate which line the drone is on based on progress
         const totalLineLength = powerLines.length;
         const lineIndex = Math.floor(newProgress * totalLineLength) % totalLineLength;
         const positionOnLine = (newProgress * totalLineLength) % 1;
-        
+
         const line = powerLines[lineIndex];
         const startCoords = line[0] as [number, number];
         const endCoords = line[1] as [number, number];
-        
+
         // Interpolate position along the line
         const newLat = startCoords[0] + (endCoords[0] - startCoords[0]) * positionOnLine;
         const newLng = startCoords[1] + (endCoords[1] - startCoords[1]) * positionOnLine;
-        
+
         // Update drone marker position
         if (droneMarkers[droneIndex]) {
           droneMarkers[droneIndex].setLatLng([newLat, newLng]);
         }
-        
+
         // Reset when completed full cycle
         return newProgress >= 1 ? 0 : newProgress;
       });
@@ -199,9 +203,9 @@ export default function MapComponent() {
     return () => {
       clearInterval(animationInterval);
       // Clean up event listener
-      const mapContainer = containerRef.current;
-      if (wheelHandlerRef.current && mapContainer) {
-        mapContainer.removeEventListener("wheel", wheelHandlerRef.current);
+      const container = containerRef.current;
+      if (wheelHandlerRef.current && container) {
+        container.removeEventListener("wheel", wheelHandlerRef.current);
       }
       map.remove();
     };
@@ -209,4 +213,3 @@ export default function MapComponent() {
 
   return <div ref={containerRef} className="w-full h-full rounded-lg" />;
 }
-

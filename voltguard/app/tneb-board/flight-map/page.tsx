@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { PageBreadCrumb } from "@/components/common";
 import dynamic from "next/dynamic";
+import TnebBoardHeader from "@/components/layout/TnebBoardHeader";
 
 // Dynamically import map component to avoid SSR issues
 const MapComponent = dynamic(() => import("./MapComponent"), {
@@ -91,7 +91,7 @@ export default function FlightMapPage() {
   // Simulate joystick control with smooth transitions using requestAnimationFrame
   useEffect(() => {
     let rafId: number;
-    
+
     const handleMouseDown = (e: MouseEvent) => {
       isDraggingRef.current = true;
       setIsDragging(true);
@@ -122,7 +122,7 @@ export default function FlightMapPage() {
       setIsDragging(true);
       cancelAnimationFrame(rafId);
       const touch = e.touches[0];
-      const mouseEvent = new MouseEvent('mousemove', {
+      const mouseEvent = new MouseEvent("mousemove", {
         clientX: touch.clientX,
         clientY: touch.clientY,
       });
@@ -134,7 +134,7 @@ export default function FlightMapPage() {
         e.preventDefault();
         cancelAnimationFrame(rafId);
         const touch = e.touches[0];
-        const mouseEvent = new MouseEvent('mousemove', {
+        const mouseEvent = new MouseEvent("mousemove", {
           clientX: touch.clientX,
           clientY: touch.clientY,
         });
@@ -221,10 +221,7 @@ export default function FlightMapPage() {
 
   return (
     <div className="space-y-0 h-screen flex flex-col overflow-hidden">
-      <div className="flex-shrink-0 pl-64 pt-4 px-6">
-        <PageBreadCrumb pageName="Flight Map" />
-      </div>
-
+      <TnebBoardHeader />
       <div className="flex gap-4 flex-1 overflow-hidden px-4 pb-4 min-h-0">
         {/* Sidebar - Collapsed on this page */}
         <aside className="w-72 bg-white dark:bg-gray-800 rounded-2xl p-4 overflow-y-auto flex flex-col gap-4 flex-shrink-0 hidden lg:flex">
@@ -305,8 +302,9 @@ export default function FlightMapPage() {
 
             {/* Control Section */}
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col gap-3 shadow-lg overflow-y-auto scrollbar scrollbar-thumb-brand-400 dark:scrollbar-thumb-brand-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white sticky top-0 bg-white dark:bg-gray-800 py-1 z-10">🚁 Drone Control Panel</h3>
-
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white sticky top-0 bg-white dark:bg-gray-800 py-1 z-10">
+                🚁 Drone Control Panel
+              </h3>
               {/* Status Badges */}
               <div className="grid grid-cols-2 gap-3 flex-shrink-0">
                 <div className="bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400 p-3 rounded-lg text-center font-bold text-base">
@@ -319,10 +317,22 @@ export default function FlightMapPage() {
 
               {/* Telemetry Data - Large */}
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-base font-mono text-gray-800 dark:text-gray-200 space-y-2 flex-shrink-0 border-l-4 border-brand-500">
-                <div className="flex justify-between"><span className="font-bold text-gray-900 dark:text-white">Drone ID:</span> <span className="text-brand-600 dark:text-brand-400">{telemetry.drone_id}</span></div>
-                <div className="flex justify-between"><span className="font-bold text-gray-900 dark:text-white">Temp:</span> <span className="text-brand-600 dark:text-brand-400">{telemetry.temperature.toFixed(1)}°C</span></div>
-                <div className="flex justify-between"><span className="font-bold text-gray-900 dark:text-white">Signal:</span> <span className="text-brand-600 dark:text-brand-400">{telemetry.signal_strength}%</span></div>
-                <div className="flex justify-between"><span className="font-bold text-gray-900 dark:text-white">Altitude:</span> <span className="text-brand-600 dark:text-brand-400">{telemetry.position.altitude.toFixed(1)}m</span></div>
+                <div className="flex justify-between">
+                  <span className="font-bold text-gray-900 dark:text-white">Drone ID:</span>
+                  <span className="text-brand-600 dark:text-brand-400">{telemetry.drone_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold text-gray-900 dark:text-white">Temp:</span>
+                  <span className="text-brand-600 dark:text-brand-400">{telemetry.temperature.toFixed(1)}°C</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold text-gray-900 dark:text-white">Signal:</span>
+                  <span className="text-brand-600 dark:text-brand-400">{telemetry.signal_strength}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold text-gray-900 dark:text-white">Altitude:</span>
+                  <span className="text-brand-600 dark:text-brand-400">{telemetry.position.altitude.toFixed(1)}m</span>
+                </div>
               </div>
 
               {/* Control Buttons - Large & Bold */}
@@ -360,17 +370,17 @@ export default function FlightMapPage() {
               {/* Joystick Control */}
               <div className="flex flex-col items-center gap-3 flex-shrink-0 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl border-2 border-gray-300 dark:border-gray-600">
                 <p className="text-lg font-bold text-gray-900 dark:text-white">🕹️ Manual Control</p>
-                
                 <div
                   ref={joystickRef}
-                  className="w-40 h-40 rounded-full bg-gray-200 dark:bg-gray-600 border-4 border-gray-400 dark:border-gray-500 relative cursor-grab active:cursor-grabbing shadow-lg"
+                  className="w-40 h-40 rounded-full bg-gray-200 dark:bg-gray-600 border-4 border-gray-400 dark:border-gray-500 relative cursor-grab active:cursor-grabbing shadow-lg select-none"
+                  style={{ touchAction: "none", userSelect: "none" }}
                 >
                   <div
-                    className="absolute top-1/2 left-1/2 w-12 h-12 bg-brand-600 dark:bg-brand-500 rounded-full shadow-lg"
+                    className="absolute top-1/2 left-1/2 w-12 h-12 bg-brand-600 dark:bg-brand-500 rounded-full shadow-lg pointer-events-none"
                     style={{
                       transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`,
-                      transition: isDragging ? 'none' : 'transform 0.15s ease-out',
-                      willChange: 'transform',
+                      transition: isDragging ? "none" : "transform 0.15s ease-out",
+                      willChange: "transform",
                     }}
                   ></div>
                 </div>

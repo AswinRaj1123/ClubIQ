@@ -25,6 +25,8 @@ export default function ProfilePage() {
           router.replace("/electrician/profile");
         } else if (user.role === "lineman") {
           router.replace("/lineman/profile");
+        } else if (user.role === "tneb_board" || user.role === "tneb-board") {
+          router.replace("/tneb-board");
         } else {
           router.replace("/consumer/profile");
         }

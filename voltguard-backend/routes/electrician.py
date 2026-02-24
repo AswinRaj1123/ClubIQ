@@ -271,8 +271,6 @@ async def get_my_assignments(
                     updated_at=req["updated_at"]
                 )
             )
-        ]
-        
         return FaultRequestList(requests=request_responses, total=len(request_responses))
     except HTTPException:
         raise
