@@ -40,14 +40,14 @@ async def update_location(
         locations_collection = db["consumer_locations"]
         
         # Find existing location for user and update it, or insert new one
-        result = locations_collection.update_one(
+        result = await locations_collection.update_one(
             {"user_id": str(current_user.get("_id"))},
             {"$set": location.to_update_dict()},
             upsert=True
         )
         
         # Fetch the updated location
-        updated_location = locations_collection.find_one(
+        updated_location = await locations_collection.find_one(
             {"user_id": str(current_user.get("_id"))}
         )
         
@@ -78,7 +78,7 @@ async def get_current_location(
     """
     try:
         locations_collection = db["consumer_locations"]
-        location = locations_collection.find_one(
+        location = await locations_collection.find_one(
             {"user_id": str(current_user.get("_id"))}
         )
         
@@ -148,7 +148,7 @@ async def resume_sharing_location(
     """
     try:
         locations_collection = db["consumer_locations"]
-        result = locations_collection.update_one(
+        result = await locations_collection.update_one(
             {"user_id": str(current_user.get("_id"))},
             {"$set": {"is_sharing": True, "updated_at": datetime.utcnow()}}
         )
@@ -239,10 +239,10 @@ async def create_fault_request(
         
         # Insert into database
         fault_requests_collection = db["fault_requests"]
-        result = fault_requests_collection.insert_one(fault_request.to_dict())
+        result = await fault_requests_collection.insert_one(fault_request.to_dict())
         
         # Fetch the created request
-        created_request = fault_requests_collection.find_one({"_id": result.inserted_id})
+        created_request = await fault_requests_collection.find_one({"_id": result.inserted_id})
         
         return FaultRequestResponse(
             id=str(created_request["_id"]),
@@ -283,8 +283,10 @@ async def get_consumer_fault_requests(
         if status_filter:
             query["status"] = status_filter
         
-        # Fetch requests sorted by creation date (newest first)
-        requests = list(fault_requests_collection.find(query).sort("created_at", -1))
+        # Fetch requests sorted by creation date (newest first) (async)
+        requests = []
+        async for req in fault_requests_collection.find(query).sort("created_at", -1):
+            requests.append(req)
         
         # Convert to response format
         users_collection = db["users"]
@@ -296,7 +298,7 @@ async def get_consumer_fault_requests(
             if req.get("assigned_to"):
                 try:
                     from bson import ObjectId
-                    electrician = users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
+                    electrician = await users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
                     if electrician:
                         assigned_to_name = electrician.get("full_name", "Unknown")
                 except:
@@ -341,7 +343,7 @@ async def get_fault_request(
     try:
         fault_requests_collection = db["fault_requests"]
         
-        request_doc = fault_requests_collection.find_one({
+        request_doc = await fault_requests_collection.find_one({
             "_id": ObjectId(request_id),
             "consumer_id": str(current_user.get("_id"))
         })
@@ -388,7 +390,7 @@ async def cancel_fault_request(
     try:
         fault_requests_collection = db["fault_requests"]
         
-        result = fault_requests_collection.update_one(
+        result = await fault_requests_collection.update_one(
             {
                 "_id": ObjectId(request_id),
                 "consumer_id": str(current_user.get("_id"))

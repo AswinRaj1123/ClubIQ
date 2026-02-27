@@ -1,13 +1,27 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from routes import auth_router, consumer_router, electrician_router, chat_router
-from database import close_db
+from database import close_db, init_db
 
-# Create FastAPI app
+# Lifespan context manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage app startup and shutdown"""
+    # Startup
+    await init_db()
+    print("🚀 VoltGuard API started")
+    yield
+    # Shutdown
+    await close_db()
+    print("🛑 VoltGuard API stopped")
+
+# Create FastAPI app with lifespan
 app = FastAPI(
     title="VoltGuard API",
     description="Smart Power Grid Inspection with AI-Powered Drone Monitoring",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Add CORS middleware
@@ -37,19 +51,6 @@ app.include_router(chat_router)
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "message": "VoltGuard API is running"}
-
-# Startup event
-@app.on_event("startup")
-async def startup():
-    """Initialize on startup"""
-    print("🚀 VoltGuard API started")
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown():
-    """Cleanup on shutdown"""
-    close_db()
-    print("🛑 VoltGuard API stopped")
 
 if __name__ == "__main__":
     import uvicorn

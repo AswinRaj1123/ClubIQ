@@ -25,8 +25,8 @@ async def signup(req: SignUpRequest):
     db = get_db()
     users_collection = db["users"]
     
-    # Check if user already exists
-    existing_user = users_collection.find_one({"email": req.email})
+    # Check if user already exists (async)
+    existing_user = await users_collection.find_one({"email": req.email})
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -46,8 +46,8 @@ async def signup(req: SignUpRequest):
         company=req.company
     )
     
-    # Insert user into database
-    result = users_collection.insert_one(user.to_dict())
+    # Insert user into database (async)
+    result = await users_collection.insert_one(user.to_dict())
     user._id = result.inserted_id
     
     # Create JWT token
@@ -78,8 +78,8 @@ async def signin(req: SignInRequest):
     db = get_db()
     users_collection = db["users"]
     
-    # Find user by email
-    user_doc = users_collection.find_one({"email": req.email})
+    # Find user by email (async)
+    user_doc = await users_collection.find_one({"email": req.email})
     if not user_doc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -106,8 +106,8 @@ async def signin(req: SignInRequest):
     # Create JWT token
     access_token = create_access_token(str(user._id), user.email, user.role)
     
-    # Update last login
-    users_collection.update_one(
+    # Update last login (async)
+    await users_collection.update_one(
         {"_id": user._id},
         {"$set": {"updated_at": datetime.utcnow()}}
     )
@@ -165,7 +165,7 @@ async def get_current_user(request: Request):
         db = get_db()
         users_collection = db["users"]
         
-        user_doc = users_collection.find_one({"_id": ObjectId(payload["user_id"])})
+        user_doc = await users_collection.find_one({"_id": ObjectId(payload["user_id"])})
         
         if not user_doc:
             raise HTTPException(
@@ -210,8 +210,8 @@ async def update_user_role(
         
         users_collection = db["users"]
         
-        # Update user's role
-        result = users_collection.update_one(
+        # Update user's role (async)
+        result = await users_collection.update_one(
             {"_id": ObjectId(current_user.get("_id"))},
             {"$set": {"role": new_role, "updated_at": datetime.utcnow()}}
         )
@@ -222,8 +222,8 @@ async def update_user_role(
                 detail="User not found"
             )
         
-        # Fetch updated user
-        updated_user = users_collection.find_one({"_id": ObjectId(current_user.get("_id"))})
+        # Fetch updated user (async)
+        updated_user = await users_collection.find_one({"_id": ObjectId(current_user.get("_id"))})
         
         # Create new token with updated role
         access_token = create_access_token(str(updated_user["_id"]), updated_user["email"], updated_user["role"])
@@ -320,8 +320,8 @@ async def update_user_profile(
         db = get_db()
         users_collection = db["users"]
         
-        # Verify user exists
-        existing_user = users_collection.find_one({"_id": user_object_id})
+        # Verify user exists (async)
+        existing_user = await users_collection.find_one({"_id": user_object_id})
         if not existing_user:
             print(f"[ERROR] User not found with ID: {user_object_id}")
             raise HTTPException(
@@ -335,8 +335,8 @@ async def update_user_profile(
         update_data = {"updated_at": datetime.utcnow()}
         
         if email is not None and email.strip():
-            # Check if new email is already taken
-            existing_email_user = users_collection.find_one({
+            # Check if new email is already taken (async)
+            existing_email_user = await users_collection.find_one({
                 "email": email,
                 "_id": {"$ne": user_object_id}
             })
@@ -373,16 +373,16 @@ async def update_user_profile(
         
         print(f"[DEBUG] Update data: {update_data}")
         
-        # Update user
-        result = users_collection.update_one(
+        # Update user (async)
+        result = await users_collection.update_one(
             {"_id": user_object_id},
             {"$set": update_data}
         )
         
         print(f"[DEBUG] Update result - Matched: {result.matched_count}, Modified: {result.modified_count}")
         
-        # Fetch updated user
-        updated_user = users_collection.find_one({"_id": user_object_id})
+        # Fetch updated user (async)
+        updated_user = await users_collection.find_one({"_id": user_object_id})
         
         if not updated_user:
             print(f"[ERROR] Failed to retrieve updated user after update")

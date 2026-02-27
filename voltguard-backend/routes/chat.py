@@ -26,7 +26,7 @@ async def send_message(
         fault_requests_collection = db["fault_requests"]
         
         try:
-            request_doc = fault_requests_collection.find_one(
+            request_doc = await fault_requests_collection.find_one(
                 {"_id": ObjectId(message_data.request_id)}
             )
             print(f"DEBUG: Found request by ObjectId: {request_doc is not None}")
@@ -75,10 +75,10 @@ async def send_message(
 
         # Save to database
         messages_collection = db["messages"]
-        result = messages_collection.insert_one(message.to_dict())
+        result = await messages_collection.insert_one(message.to_dict())
 
         # Fetch created message
-        created_msg = messages_collection.find_one({"_id": result.inserted_id})
+        created_msg = await messages_collection.find_one({"_id": result.inserted_id})
 
         print(f"DEBUG: Message saved with ID: {result.inserted_id}")
 
@@ -118,7 +118,7 @@ async def get_request_messages(
         
         # Try to find by ObjectId first
         try:
-            request_doc = fault_requests_collection.find_one(
+            request_doc = await fault_requests_collection.find_one(
                 {"_id": ObjectId(request_id)}
             )
             print(f"DEBUG: Found request by ObjectId: {request_doc is not None}")
@@ -151,13 +151,13 @@ async def get_request_messages(
                 detail="Not authorized to view messages in this request",
             )
 
-        # Fetch messages
+        # Fetch messages (async)
         messages_collection = db["messages"]
-        messages = list(
-            messages_collection.find({
-                "request_id": request_id
-            }).sort("created_at", 1)
-        )
+        messages = []
+        async for msg in messages_collection.find({
+            "request_id": request_id
+        }).sort("created_at", 1):
+            messages.append(msg)
 
         print(f"DEBUG: Found {len(messages)} messages for request {request_id}")
 

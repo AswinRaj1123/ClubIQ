@@ -38,11 +38,10 @@ async def get_all_fault_requests(
         if status_filter:
             query["status"] = status_filter
         
-        # Fetch requests sorted by priority and creation date
-        requests = list(
-            fault_requests_collection.find(query)
-            .sort([("priority", -1), ("created_at", -1)])
-        )
+        # Fetch requests sorted by priority and creation date (async)
+        requests = []
+        async for req in fault_requests_collection.find(query).sort([("priority", -1), ("created_at", -1)]):
+            requests.append(req)
         
         # Convert to response format
         users_collection = db["users"]
@@ -54,7 +53,7 @@ async def get_all_fault_requests(
             if req.get("assigned_to"):
                 try:
                     from bson import ObjectId
-                    electrician = users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
+                    electrician = await users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
                     if electrician:
                         assigned_to_name = electrician.get("full_name", "Unknown")
                 except:
@@ -109,7 +108,7 @@ async def get_fault_request(
         fault_requests_collection = db["fault_requests"]
         users_collection = db["users"]
         
-        request_doc = fault_requests_collection.find_one({
+        request_doc = await fault_requests_collection.find_one({
             "_id": ObjectId(request_id)
         })
         
@@ -123,7 +122,7 @@ async def get_fault_request(
         assigned_to_name = None
         if request_doc.get("assigned_to"):
             try:
-                electrician = users_collection.find_one({"_id": ObjectId(request_doc.get("assigned_to"))})
+                electrician = await users_collection.find_one({"_id": ObjectId(request_doc.get("assigned_to"))})
                 if electrician:
                     assigned_to_name = electrician.get("full_name", "Unknown")
             except:
@@ -186,7 +185,7 @@ async def assign_fault_request(
             # Auto-assign to current electrician if not specified
             update_data["assigned_to"] = str(current_user.get("_id"))
         
-        result = fault_requests_collection.update_one(
+        result = await fault_requests_collection.update_one(
             {"_id": ObjectId(request_id)},
             {"$set": update_data}
         )
@@ -232,11 +231,10 @@ async def get_my_assignments(
         if status_filter:
             query["status"] = status_filter
         
-        # Fetch requests
-        requests = list(
-            fault_requests_collection.find(query)
-            .sort("created_at", -1)
-        )
+        # Fetch requests (async)
+        requests = []
+        async for req in fault_requests_collection.find(query).sort("created_at", -1):
+            requests.append(req)
         
         # Convert to response format
         request_responses = []
@@ -247,7 +245,7 @@ async def get_my_assignments(
             if req.get("assigned_to"):
                 try:
                     from bson import ObjectId
-                    electrician = users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
+                    electrician = await users_collection.find_one({"_id": ObjectId(req.get("assigned_to"))})
                     if electrician:
                         assigned_to_name = electrician.get("full_name", "Unknown")
                 except:
