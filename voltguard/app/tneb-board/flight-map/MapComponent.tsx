@@ -64,7 +64,7 @@ export default function MapComponent() {
         e.stopPropagation();
 
         // Only zoom if map is fully initialized
-        if (!map._container || !map._loaded) {
+        if (!(map as any)._container || !(map as any)._loaded) {
           return;
         }
 
