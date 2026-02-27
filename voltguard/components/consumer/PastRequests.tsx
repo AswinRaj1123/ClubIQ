@@ -35,7 +35,7 @@ export default function PastRequests() {
       setError(null);
       const response = await faultAPI.getMyFaultRequests();
       console.log("Fetched past requests:", response);
-      setRequests(response.requests);
+      setRequests(response.requests as FaultRequest[]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load requests";
       console.error("Error fetching requests:", errorMessage);

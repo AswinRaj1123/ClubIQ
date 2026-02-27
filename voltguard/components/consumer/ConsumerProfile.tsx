@@ -17,6 +17,11 @@ interface UserData {
   role: string;
   is_active: boolean;
   created_at: string;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
 }
 
 export default function ConsumerProfile() {

@@ -185,7 +185,7 @@ export default function RaiseFaultRequest() {
         location: formData.location,
         latitude: sharedLocation?.latitude,
         longitude: sharedLocation?.longitude,
-        priority: formData.priority,
+        priority: formData.priority as "low" | "medium" | "high" | "critical",
         photo_url: photoUrl,
       });
 

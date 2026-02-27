@@ -69,9 +69,9 @@ export default function RequestQueue() {
       setError(null);
       const response = await faultAPI.getAllFaultRequests("open");
       console.log("Fetched requests:", response);
-      setRequests(response.requests);
+      setRequests(response.requests as FaultRequest[]);
       if (response.requests.length > 0) {
-        setSelectedRequest(response.requests[0]);
+        setSelectedRequest(response.requests[0] as FaultRequest);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load requests";

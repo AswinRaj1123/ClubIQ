@@ -91,7 +91,7 @@ export default function ChatPage({ requestId }: { requestId: string }) {
         const response = await chatAPI.getMessages(requestId);
         const formattedMessages = response.messages.map((msg: any) => ({
           id: msg.id,
-          sender: msg.sender_type === "electrician" ? "user" : "contact",
+          sender: (msg.sender_type === "electrician" ? "user" : "contact") as "user" | "contact",
           content: msg.content,
           timestamp: new Date(msg.created_at).toLocaleTimeString("en-US", {
             hour: "2-digit",
@@ -100,10 +100,10 @@ export default function ChatPage({ requestId }: { requestId: string }) {
           senderName: msg.sender_type === "electrician" ? "You" : "Consumer",
           sender_type: msg.sender_type,
           sender_id: msg.sender_id,
-        }));
+        })) as Message[];
         
         // Only update state if messages actually changed (prevent flickering)
-        setMessages((prevMessages) => {
+        setMessages((prevMessages: Message[]) => {
           const oldJson = JSON.stringify(prevMessages.map(m => m.id));
           const newJson = JSON.stringify(formattedMessages.map(m => m.id));
           return oldJson === newJson ? prevMessages : formattedMessages;
@@ -179,7 +179,7 @@ export default function ChatPage({ requestId }: { requestId: string }) {
       const response = await chatAPI.getMessages(requestId);
       const formattedMessages = response.messages.map((msg: any) => ({
         id: msg.id,
-        sender: msg.sender_type === "electrician" ? "user" : "contact",
+        sender: (msg.sender_type === "electrician" ? "user" : "contact") as "user" | "contact",
         content: msg.content,
         timestamp: new Date(msg.created_at).toLocaleTimeString("en-US", {
           hour: "2-digit",
@@ -188,7 +188,7 @@ export default function ChatPage({ requestId }: { requestId: string }) {
         senderName: msg.sender_type === "electrician" ? "You" : "Consumer",
         sender_type: msg.sender_type,
         sender_id: msg.sender_id,
-      }));
+      })) as Message[];
       
       // Always update after send (don't skip comparison)
       setMessages(formattedMessages);

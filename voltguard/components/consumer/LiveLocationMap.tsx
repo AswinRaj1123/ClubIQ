@@ -304,7 +304,7 @@ export default function LiveLocationMap() {
           {location && (
             <Button
               onClick={stopSharing}
-              variant="secondary"
+              variant="outline"
               className="w-full"
             >
               ✕ Stop Sharing
