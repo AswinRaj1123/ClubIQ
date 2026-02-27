@@ -5,7 +5,7 @@ from database import get_db
 from models import User
 from schemas import SignUpRequest, SignInRequest, TokenResponse, MessageResponse, UserResponse
 from utils import hash_password, verify_password, create_access_token, decode_access_token
-from utils.auth import get_current_user
+from utils.auth import get_current_user as get_current_user_dep
 from bson import ObjectId
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -127,7 +127,7 @@ async def signin(req: SignInRequest):
     return TokenResponse(access_token=access_token, user=user_response)
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(request: Request):
+async def get_me(request: Request):
     """
     Get current user profile
     
@@ -198,7 +198,7 @@ async def get_current_user(request: Request):
 
 @router.put("/update-role", response_model=TokenResponse)
 async def update_user_role(
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_current_user_dep),
     db = Depends(get_db)
 ):
     """
@@ -260,7 +260,7 @@ async def update_user_profile(
     state: Optional[str] = None,
     postal_code: Optional[str] = None,
     country: Optional[str] = None,
-    current_user = Depends(get_current_user),
+    current_user = Depends(get_current_user_dep),
 ):
     """
     Update current user's profile information

@@ -117,7 +117,7 @@ async def stop_sharing_location(
     """
     try:
         locations_collection = db["consumer_locations"]
-        result = locations_collection.update_one(
+        result = await locations_collection.update_one(
             {"user_id": str(current_user.get("_id"))},
             {"$set": {"is_sharing": False, "updated_at": datetime.utcnow()}}
         )
@@ -183,7 +183,7 @@ async def get_location_history(
         
         # For now, this returns the current location
         # In a real app, you might store historical data
-        location = locations_collection.find_one(
+        location = await locations_collection.find_one(
             {"user_id": str(current_user.get("_id"))}
         )
         
